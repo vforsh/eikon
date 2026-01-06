@@ -10,12 +10,17 @@ import { mkdir } from "node:fs/promises";
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
 const DEFAULT_PRESET = "web-ui";
 const CONFIG_PATH = join(homedir(), ".config", "eikon", "config.toml");
+const MOCK_RESPONSE = "EIKON_E2E_MOCK_RESPONSE";
 
 const program = new Command();
 program
   .name("eikon")
   .description("Send a prompt and image to an OpenRouter vision model")
-  .version("0.1.0")
+  .version("0.1.0");
+
+const run = program
+  .command("run", { isDefault: true })
+  .description("Analyze an image with an optional prompt")
   .argument("<image>", "Path to image file (png/jpg/webp)")
   .argument("[prompt...]", "Prompt text (optional if --preset is set)")
   .option("--model <id>", "OpenRouter model ID", DEFAULT_MODEL)
@@ -23,7 +28,10 @@ program
   .option("--out <file>", "Write response to file instead of stdout")
   .option("--api-key <key>", "OpenRouter API key (overrides OPENROUTER_API_KEY)")
   .option("--json", "Output JSON to stdout")
-  .allowExcessArguments(false);
+  .allowExcessArguments(false)
+  .action(async (imageArg: string, promptParts: string[] | undefined, options) => {
+    await runEikon(imageArg, promptParts, options);
+  });
 
 program
   .command("init")
@@ -48,52 +56,87 @@ program
 
 await program.parseAsync();
 
-const isInitCommand = process.argv.slice(2)[0] === "init";
-if (isInitCommand) {
-  process.exit(0);
-}
-
-const opts = program.opts<{
-  model: string;
+type RunOptions = {
+  model?: string;
   preset?: string;
   out?: string;
   apiKey?: string;
   json?: boolean;
-}>();
+};
 
-const [imageArg, promptParts] = program.args as [string, string[] | undefined];
+async function runEikon(
+  imageArg: string,
+  promptParts: string[] | undefined,
+  opts: RunOptions,
+) {
+  const imagePath = resolve(imageArg);
 
-if (!imageArg) {
-  program.help({ error: true });
+  const config = await loadConfig();
+  const apiKey = opts.apiKey || process.env.OPENROUTER_API_KEY || config.apiKey;
+  if (!apiKey) {
+    console.error("Missing API key. Set OPENROUTER_API_KEY or pass --api-key.");
+    process.exit(1);
+  }
+
+  const mimeType = getImageMimeType(imagePath);
+
+  await assertReadableFile(imagePath);
+
+  const imageBase64 = await readFileAsBase64(imagePath);
+  const prompt = await resolvePrompt({
+    preset: opts.preset,
+    promptParts,
+  });
+
+  try {
+    const text =
+      process.env.EIKON_MOCK_OPENROUTER === "1"
+        ? MOCK_RESPONSE
+        : await requestCompletion({
+            apiKey,
+            model: opts.model || process.env.OPENROUTER_MODEL || config.model || DEFAULT_MODEL,
+            prompt,
+            mimeType,
+            imageBase64,
+          });
+
+    if (opts.out) {
+      await Bun.write(opts.out, text);
+      process.exit(0);
+    }
+
+    if (opts.json) {
+      process.stdout.write(JSON.stringify({ text }) + "\n");
+    } else {
+      process.stdout.write(text + (text.endsWith("\n") ? "" : "\n"));
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Request failed: ${message}`);
+    process.exit(1);
+  }
 }
 
-const imagePath = resolve(imageArg);
-
-const config = await loadConfig();
-const apiKey = opts.apiKey || process.env.OPENROUTER_API_KEY || config.apiKey;
-if (!apiKey) {
-  console.error("Missing API key. Set OPENROUTER_API_KEY or pass --api-key.");
-  process.exit(1);
-}
-
-const mimeType = getImageMimeType(imagePath);
-
-await assertReadableFile(imagePath);
-
-const imageBase64 = await readFileAsBase64(imagePath);
-const prompt = await resolvePrompt({
-  preset: opts.preset,
-  promptParts,
-});
-
-const openai = new OpenAI({
+async function requestCompletion({
   apiKey,
-  baseURL: "https://openrouter.ai/api/v1",
-});
+  model,
+  prompt,
+  mimeType,
+  imageBase64,
+}: {
+  apiKey: string;
+  model: string;
+  prompt: string;
+  mimeType: string;
+  imageBase64: string;
+}) {
+  const openai = new OpenAI({
+    apiKey,
+    baseURL: "https://openrouter.ai/api/v1",
+  });
 
-try {
   const response = await openai.chat.completions.create({
-    model: opts.model || process.env.OPENROUTER_MODEL || config.model || DEFAULT_MODEL,
+    model,
     messages: [
       {
         role: "user",
@@ -113,20 +156,7 @@ try {
     throw new Error("No response content received from the model.");
   }
 
-  if (opts.out) {
-    await Bun.write(opts.out, text);
-    process.exit(0);
-  }
-
-  if (opts.json) {
-    process.stdout.write(JSON.stringify({ text }) + "\n");
-  } else {
-    process.stdout.write(text + (text.endsWith("\n") ? "" : "\n"));
-  }
-} catch (error) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(`Request failed: ${message}`);
-  process.exit(1);
+  return text;
 }
 
 async function assertReadableFile(filePath: string) {

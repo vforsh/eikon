@@ -18,13 +18,15 @@ bun install
 
 ```bash
 eikon <image> [prompt...] [--preset <name>] [--model <id>] [--out <file>] [--api-key <key>] [--json]
+eikon run <image> [prompt...] [--preset <name>] [--model <id>] [--out <file>] [--api-key <key>] [--json]
+eikon init [--force]
 ```
 
 ### Examples
 
 ```bash
-# Run anywhere with npx (requires Bun installed)
-npx eikon ./image.png "Describe the UI"
+# Run anywhere with bunx (requires Bun installed)
+bunx eikon ./image.png "Describe the UI"
 
 # Basic
 bun run index.ts ./image.png "Describe the UI"
@@ -48,7 +50,33 @@ bun run index.ts ./image.png "Extract labels" --json
 - With `--out`: writes the raw text response to the file and does not print to stdout.
 - With `--json` (and no `--out`): prints `{ "text": "..." }` to stdout.
 
+## Tests
+
+```bash
+bun test
+bun run test:e2e
+```
+
 ## Environment
 
 - `OPENROUTER_API_KEY`: required unless `--api-key` is provided.
 - `OPENROUTER_MODEL`: optional default model if `--model` is not set.
+
+## Config file (TOML)
+
+Run:
+
+```bash
+eikon init
+```
+
+This creates `~/.config/eikon/config.toml`.
+
+Supported keys:
+
+```toml
+apiKey = "sk-or-v1-..."
+model = "google/gemini-3-flash-preview"
+```
+
+Precedence: flags > env > config.

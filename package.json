@@ -4,6 +4,9 @@
   "description": "CLI for sending a prompt and image to OpenRouter",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "test:e2e": "bun test tests/e2e.test.ts"
+  },
   "bin": {
     "eikon": "index.ts"
   },
