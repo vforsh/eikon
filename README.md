@@ -1,7 +1,8 @@
 # Eikon
 
-Named after the Ancient Greek word “eikōn” (εἰκών), meaning “image,” “likeness,” or “icon.”
 CLI for sending a prompt + image to an OpenRouter vision model.
+
+Named after the Ancient Greek word “eikōn” (εἰκών), meaning “image,” “likeness,” or “icon.”
 
 ## Requirements
 
@@ -17,7 +18,6 @@ bun install
 ## Usage
 
 ```bash
-eikon <image> [prompt...] [--preset <name>] [--model <id>] [--out <file>] [--api-key <key>] [--json]
 eikon run <image> [prompt...] [--preset <name>] [--model <id>] [--out <file>] [--api-key <key>] [--json]
 eikon init [--force]
 ```
@@ -26,13 +26,13 @@ eikon init [--force]
 
 ```bash
 # Run anywhere with bunx (requires Bun installed)
-bunx eikon ./image.png "Describe the UI"
+bunx eikon run ./image.png "Describe the UI"
 
 # Basic
 bun run index.ts ./image.png "Describe the UI"
 
 # Use the built-in web UI polish preset (no prompt required)
-eikon ./image.png --preset web-ui
+eikon run ./image.png --preset web-ui
 
 # Use a different model
 bun run index.ts ./image.png "Summarize" --model google/gemini-2.5-flash
