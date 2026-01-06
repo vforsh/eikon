@@ -1,0 +1,21 @@
+{
+  "name": "eikon",
+  "version": "0.1.0",
+  "description": "CLI for sending a prompt and image to OpenRouter",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "eikon": "index.ts"
+  },
+  "dependencies": {
+    "commander": "^14.0.2",
+    "openai": "^6.15.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
