@@ -18,7 +18,7 @@ bun install
 ## Usage
 
 ```bash
-eikon run <image> [prompt...] [--preset <name>] [--model <id>] [--out <file>] [--api-key <key>] [--json]
+eikon run <image> [prompt...] [--preset <name>] [--model <id>] [--downsize] [--max-width <px|x0.5>] [--max-height <px|x0.5>] [--out <file>] [--api-key <key>] [--json]
 eikon init [--force]
 ```
 
@@ -42,6 +42,15 @@ bun run index.ts ./image.png "List objects" --out result.txt
 
 # JSON output
 bun run index.ts ./image.png "Extract labels" --json
+
+# Downsize image before upload (defaults to max 2048x2048)
+eikon run ./image.png --preset web-ui --downsize
+
+# Downsize by max width/height in pixels (preserves aspect ratio, no upscaling)
+eikon run ./image.png --preset web-ui --max-width 1600 --max-height 1200
+
+# Downsize by multiplier (relative to original dimensions)
+eikon run ./image.png --preset web-ui --max-width x0.5
 ```
 
 ## Output behavior
@@ -49,6 +58,14 @@ bun run index.ts ./image.png "Extract labels" --json
 - Default: prints text to stdout.
 - With `--out`: writes the raw text response to the file and does not print to stdout.
 - With `--json` (and no `--out`): prints `{ "text": "..." }` to stdout.
+
+## Downsizing images
+
+- `--downsize`: downsizes to fit within **2048x2048** before upload.
+- `--max-width` / `--max-height`: downsizes to fit within the given limits. Each accepts either:
+  - pixels (e.g. `1600`)
+  - multipliers (e.g. `x0.5`, `x0.25`)
+- If the image is already within limits, **no resize/re-encode is performed**.
 
 ## Tests
 

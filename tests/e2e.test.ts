@@ -70,3 +70,50 @@ test("eikon --out writes to file", async () => {
   const text = await Bun.file(outPath).text();
   expect(text).toBe(MOCK_RESPONSE);
 });
+
+test("eikon --downsize resizes image to default max", async () => {
+  const { code, stdout } = await runEikon(
+    [FIXTURE_PATH, "--preset", "web-ui", "--downsize"],
+    { EIKON_TEST_IMAGE_INFO: "1" },
+  );
+
+  expect(code).toBe(0);
+  // Original is 3168x2774. Default max is 2048.
+  // fit: inside means it should be 2048x1793 (approx)
+  expect(stdout).toContain("w:2048");
+  expect(stdout).toContain("h:1793");
+});
+
+test("eikon --max-width 1000 resizes width", async () => {
+  const { code, stdout } = await runEikon(
+    [FIXTURE_PATH, "--preset", "web-ui", "--max-width", "1000"],
+    { EIKON_TEST_IMAGE_INFO: "1" },
+  );
+
+  expect(code).toBe(0);
+  expect(stdout).toContain("w:1000");
+});
+
+test("eikon --max-width x0.5 resizes by scale", async () => {
+  const { code, stdout } = await runEikon(
+    [FIXTURE_PATH, "--preset", "web-ui", "--max-width", "x0.5"],
+    { EIKON_TEST_IMAGE_INFO: "1" },
+  );
+
+  expect(code).toBe(0);
+  // 3168 * 0.5 = 1584
+  expect(stdout).toContain("w:1584");
+});
+
+test("eikon handles invalid resize spec", async () => {
+  const { code, stderr } = await runEikon([
+    FIXTURE_PATH,
+    "--preset",
+    "web-ui",
+    "--max-width",
+    "abc",
+  ]);
+
+  expect(code).toBe(2);
+  expect(stderr).toContain("Invalid --max-width");
+});
