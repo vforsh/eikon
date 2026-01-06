@@ -2,11 +2,14 @@
 
 import { Command } from "commander";
 import OpenAI from "openai";
-import { extname, resolve } from "node:path";
+import { extname, resolve, join } from "node:path";
+import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
+import { mkdir } from "node:fs/promises";
 
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
 const DEFAULT_PRESET = "web-ui";
+const CONFIG_PATH = join(homedir(), ".config", "eikon", "config.toml");
 
 const program = new Command();
 program
@@ -22,7 +25,33 @@ program
   .option("--json", "Output JSON to stdout")
   .allowExcessArguments(false);
 
-program.parse();
+program
+  .command("init")
+  .description("Create a default config file in your user config directory")
+  .option("--force", "Overwrite existing config file")
+  .action(async (options: { force?: boolean }) => {
+    const configFile = Bun.file(CONFIG_PATH);
+    if (await configFile.exists()) {
+      if (!options.force) {
+        console.error(`Config already exists: ${CONFIG_PATH}`);
+        console.error("Use --force to overwrite.");
+        process.exit(1);
+      }
+    }
+
+    const configDir = join(homedir(), ".config", "eikon");
+    await mkdir(configDir, { recursive: true });
+    const template = `# Eikon config\n#\n# apiKey = \"sk-or-v1-...\"\n# model = \"${DEFAULT_MODEL}\"\n`;
+    await Bun.write(CONFIG_PATH, template);
+    process.stdout.write(`Wrote config to ${CONFIG_PATH}\n`);
+  });
+
+await program.parseAsync();
+
+const isInitCommand = process.argv.slice(2)[0] === "init";
+if (isInitCommand) {
+  process.exit(0);
+}
 
 const opts = program.opts<{
   model: string;
@@ -40,7 +69,8 @@ if (!imageArg) {
 
 const imagePath = resolve(imageArg);
 
-const apiKey = opts.apiKey || process.env.OPENROUTER_API_KEY;
+const config = await loadConfig();
+const apiKey = opts.apiKey || process.env.OPENROUTER_API_KEY || config.apiKey;
 if (!apiKey) {
   console.error("Missing API key. Set OPENROUTER_API_KEY or pass --api-key.");
   process.exit(1);
@@ -63,7 +93,7 @@ const openai = new OpenAI({
 
 try {
   const response = await openai.chat.completions.create({
-    model: opts.model || process.env.OPENROUTER_MODEL || DEFAULT_MODEL,
+    model: opts.model || process.env.OPENROUTER_MODEL || config.model || DEFAULT_MODEL,
     messages: [
       {
         role: "user",
@@ -158,4 +188,24 @@ async function loadPresetPrompt(name: string) {
 
   const filePath = fileURLToPath(new URL("./prompts/web-ui.md", import.meta.url));
   return await Bun.file(filePath).text();
+}
+
+async function loadConfig(): Promise<{ apiKey?: string; model?: string }> {
+  const configFile = Bun.file(CONFIG_PATH);
+  if (!(await configFile.exists())) {
+    return {};
+  }
+
+  try {
+    const text = await configFile.text();
+    const parsed = Bun.TOML.parse(text) as { apiKey?: string; model?: string };
+    return {
+      apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey : undefined,
+      model: typeof parsed.model === "string" ? parsed.model : undefined,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`Failed to read config at ${CONFIG_PATH}: ${message}`);
+    process.exit(1);
+  }
 }
