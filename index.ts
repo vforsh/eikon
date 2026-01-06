@@ -2,11 +2,11 @@
 
 import { Command } from "commander";
 import OpenAI from "openai";
-import { access, readFile, writeFile } from "node:fs/promises";
-import { constants as fsConstants } from "node:fs";
 import { extname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
+const DEFAULT_PRESET = "web-ui";
 
 const program = new Command();
 program
@@ -14,8 +14,9 @@ program
   .description("Send a prompt and image to an OpenRouter vision model")
   .version("0.1.0")
   .argument("<image>", "Path to image file (png/jpg/webp)")
-  .argument("<prompt...>", "Prompt text")
+  .argument("[prompt...]", "Prompt text (optional if --preset is set)")
   .option("--model <id>", "OpenRouter model ID", DEFAULT_MODEL)
+  .option("--preset <name>", `Built-in prompt preset (currently: ${DEFAULT_PRESET})`)
   .option("--out <file>", "Write response to file instead of stdout")
   .option("--api-key <key>", "OpenRouter API key (overrides OPENROUTER_API_KEY)")
   .option("--json", "Output JSON to stdout")
@@ -25,18 +26,18 @@ program.parse();
 
 const opts = program.opts<{
   model: string;
+  preset?: string;
   out?: string;
   apiKey?: string;
   json?: boolean;
 }>();
 
-const [imageArg, promptParts] = program.args as [string, string[]];
+const [imageArg, promptParts] = program.args as [string, string[] | undefined];
 
-if (!imageArg || !promptParts || promptParts.length === 0) {
+if (!imageArg) {
   program.help({ error: true });
 }
 
-const prompt = promptParts.join(" ");
 const imagePath = resolve(imageArg);
 
 const apiKey = opts.apiKey || process.env.OPENROUTER_API_KEY;
@@ -50,6 +51,10 @@ const mimeType = getImageMimeType(imagePath);
 await assertReadableFile(imagePath);
 
 const imageBase64 = await readFileAsBase64(imagePath);
+const prompt = await resolvePrompt({
+  preset: opts.preset,
+  promptParts,
+});
 
 const openai = new OpenAI({
   apiKey,
@@ -79,7 +84,7 @@ try {
   }
 
   if (opts.out) {
-    await writeFile(opts.out, text, "utf8");
+    await Bun.write(opts.out, text);
     process.exit(0);
   }
 
@@ -95,16 +100,15 @@ try {
 }
 
 async function assertReadableFile(filePath: string) {
-  try {
-    await access(filePath, fsConstants.R_OK);
-  } catch {
+  const f = Bun.file(filePath);
+  if (!(await f.exists())) {
     console.error(`Image not found or not readable: ${filePath}`);
     process.exit(1);
   }
 }
 
 async function readFileAsBase64(filePath: string) {
-  const bytes = await readFile(filePath);
+  const bytes = await Bun.file(filePath).arrayBuffer();
   return Buffer.from(bytes).toString("base64");
 }
 
@@ -122,4 +126,36 @@ function getImageMimeType(filePath: string) {
       console.error(`Unsupported image type: ${ext || "(no extension)"}`);
       process.exit(1);
   }
+}
+
+async function resolvePrompt({
+  preset,
+  promptParts,
+}: {
+  preset?: string;
+  promptParts?: string[];
+}) {
+  const inlinePrompt = (promptParts || []).join(" ").trim();
+  const presetPrompt = preset ? await loadPresetPrompt(preset) : "";
+
+  if (!presetPrompt && !inlinePrompt) {
+    console.error('Missing prompt. Provide "<prompt...>" or set --preset web-ui.');
+    process.exit(2);
+  }
+
+  if (presetPrompt && inlinePrompt) {
+    return `${presetPrompt}\n\nAdditional context from user:\n${inlinePrompt}`;
+  }
+
+  return presetPrompt || inlinePrompt;
+}
+
+async function loadPresetPrompt(name: string) {
+  if (name !== DEFAULT_PRESET) {
+    console.error(`Unknown preset: ${name}. Supported: ${DEFAULT_PRESET}`);
+    process.exit(2);
+  }
+
+  const filePath = fileURLToPath(new URL("./prompts/web-ui.md", import.meta.url));
+  return await Bun.file(filePath).text();
 }

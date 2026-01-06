@@ -17,14 +17,20 @@ bun install
 ## Usage
 
 ```bash
-eikon <image> <prompt...> [--model <id>] [--out <file>] [--api-key <key>] [--json]
+eikon <image> [prompt...] [--preset <name>] [--model <id>] [--out <file>] [--api-key <key>] [--json]
 ```
 
 ### Examples
 
 ```bash
+# Run anywhere with npx (requires Bun installed)
+npx eikon ./image.png "Describe the UI"
+
 # Basic
 bun run index.ts ./image.png "Describe the UI"
+
+# Use the built-in web UI polish preset (no prompt required)
+eikon ./image.png --preset web-ui
 
 # Use a different model
 bun run index.ts ./image.png "Summarize" --model google/gemini-2.5-flash

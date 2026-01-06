@@ -4,10 +4,15 @@
   "description": "CLI for sending a prompt and image to OpenRouter",
   "module": "index.ts",
   "type": "module",
-  "private": true,
   "bin": {
     "eikon": "index.ts"
   },
+  "files": [
+    "index.ts",
+    "README.md",
+    "AGENTS.md",
+    "prompts"
+  ],
   "dependencies": {
     "commander": "^14.0.2",
     "openai": "^6.15.0"
