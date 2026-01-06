@@ -34,6 +34,9 @@ bun run index.ts ./image.png "Describe the UI"
 # Use the built-in web UI polish preset (no prompt required)
 eikon run ./image.png --preset web-ui
 
+# Use the built-in layout-only web UI preset (no prompt required)
+eikon run ./image.png --preset web-ui-layout
+
 # Use a different model
 bun run index.ts ./image.png "Summarize" --model google/gemini-2.5-flash
 

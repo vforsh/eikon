@@ -9,6 +9,11 @@ import { mkdir } from "node:fs/promises";
 
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
 const DEFAULT_PRESET = "web-ui";
+const PRESET_FILES: Record<string, string> = {
+  "web-ui": "./prompts/web-ui.md",
+  "web-ui-layout": "./prompts/web-ui-layout.md",
+};
+const SUPPORTED_PRESETS = Object.keys(PRESET_FILES).sort();
 const CONFIG_PATH = join(homedir(), ".config", "eikon", "config.toml");
 const MOCK_RESPONSE = "EIKON_E2E_MOCK_RESPONSE";
 const DEFAULT_DOWNSIZE_MAX = 2048;
@@ -25,7 +30,10 @@ const run = program
   .argument("<image>", "Path to image file (png/jpg/webp)")
   .argument("[prompt...]", "Prompt text (optional if --preset is set)")
   .option("--model <id>", "OpenRouter model ID", DEFAULT_MODEL)
-  .option("--preset <name>", `Built-in prompt preset (currently: ${DEFAULT_PRESET})`)
+  .option(
+    "--preset <name>",
+    `Built-in prompt preset (supported: ${SUPPORTED_PRESETS.join(", ")})`,
+  )
   .option(
     "--downsize",
     `Downsize image before upload (defaults to max ${DEFAULT_DOWNSIZE_MAX}x${DEFAULT_DOWNSIZE_MAX})`,
@@ -80,6 +88,13 @@ type RunOptions = {
   json?: boolean;
 };
 
+async function loadSharp(): Promise<any> {
+  // `sharp`'s types are commonly `export = sharp` (no `.default`), while runtime ESM interop
+  // may provide a `.default`. Support both without fighting the type system.
+  const mod: any = await import("sharp");
+  return mod?.default ?? mod;
+}
+
 async function runEikon(
   imageArg: string,
   promptParts: string[] | undefined,
@@ -117,8 +132,7 @@ async function runEikon(
         const bytes = Buffer.from(imageBase64, "base64");
         text = `size:${bytes.length},mime:${uploadMimeType}`;
         try {
-          const mod = await import("sharp");
-          const sharp = mod.default;
+          const sharp = await loadSharp();
           const meta = await sharp(bytes).metadata();
           text += `,w:${meta.width},h:${meta.height}`;
         } catch {
@@ -251,10 +265,9 @@ async function prepareImageForUpload({
     return { imageBase64: await readFileAsBase64(imagePath), mimeType };
   }
 
-  let sharp: (typeof import("sharp"))["default"];
+  let sharp: any;
   try {
-    const mod = await import("sharp");
-    sharp = mod.default;
+    sharp = await loadSharp();
   } catch {
     console.error('Downsizing requires the "sharp" dependency. Run: bun install');
     process.exit(1);
@@ -343,7 +356,9 @@ async function resolvePrompt({
   const presetPrompt = preset ? await loadPresetPrompt(preset) : "";
 
   if (!presetPrompt && !inlinePrompt) {
-    console.error('Missing prompt. Provide "<prompt...>" or set --preset web-ui.');
+    console.error(
+      `Missing prompt. Provide "<prompt...>" or set --preset (${SUPPORTED_PRESETS.join(", ")}).`,
+    );
     process.exit(2);
   }
 
@@ -355,12 +370,13 @@ async function resolvePrompt({
 }
 
 async function loadPresetPrompt(name: string) {
-  if (name !== DEFAULT_PRESET) {
-    console.error(`Unknown preset: ${name}. Supported: ${DEFAULT_PRESET}`);
+  const relPath = PRESET_FILES[name];
+  if (!relPath) {
+    console.error(`Unknown preset: ${name}. Supported: ${SUPPORTED_PRESETS.join(", ")}`);
     process.exit(2);
   }
 
-  const filePath = fileURLToPath(new URL("./prompts/web-ui.md", import.meta.url));
+  const filePath = fileURLToPath(new URL(relPath, import.meta.url));
   return await Bun.file(filePath).text();
 }
 
