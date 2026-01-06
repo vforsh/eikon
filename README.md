@@ -1,5 +1,6 @@
 # Eikon
 
+Named after the Ancient Greek word “eikōn” (εἰκών), meaning “image,” “likeness,” or “icon.”
 CLI for sending a prompt + image to an OpenRouter vision model.
 
 ## Requirements
@@ -44,3 +45,4 @@ bun run index.ts ./image.png "Extract labels" --json
 ## Environment
 
 - `OPENROUTER_API_KEY`: required unless `--api-key` is provided.
+- `OPENROUTER_MODEL`: optional default model if `--model` is not set.

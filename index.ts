@@ -58,7 +58,7 @@ const openai = new OpenAI({
 
 try {
   const response = await openai.chat.completions.create({
-    model: opts.model || DEFAULT_MODEL,
+    model: opts.model || process.env.OPENROUTER_MODEL || DEFAULT_MODEL,
     messages: [
       {
         role: "user",
