@@ -15,6 +15,23 @@ export interface ProcessedImage {
   processed?: ImageMetadata & { resized: boolean };
 }
 
+export interface LocalImageInfo {
+  path: string;
+  mime: string;
+  bytes: number;
+  width: number;
+  height: number;
+  aspectRatio: number;
+  megapixels: number;
+  channels: number;
+  hasAlpha: boolean;
+  density?: number;
+  orientation?: number;
+  colorSpace?: string;
+  format?: string;
+  isProgressive?: boolean;
+}
+
 async function loadSharp(): Promise<any> {
   try {
     const mod: any = await import("sharp");
@@ -64,6 +81,50 @@ export function parseResizeSpec(spec: string, original: number, flagName: string
   return px;
 }
 
+async function validateImageFile(imagePath: string): Promise<string> {
+  const file = Bun.file(imagePath);
+  if (!(await file.exists())) {
+    throw new FilesystemError(`Image not found or not readable: ${imagePath}`);
+  }
+  return getImageMimeType(imagePath);
+}
+
+export async function getImageInfo(imagePath: string): Promise<LocalImageInfo> {
+  const mimeType = await validateImageFile(imagePath);
+  const file = Bun.file(imagePath);
+  const bytes = await file.arrayBuffer();
+  const inputBuffer = Buffer.from(bytes);
+
+  const sharp = await loadSharp();
+  const metadata = await sharp(inputBuffer).metadata();
+
+  if (!metadata.width || !metadata.height) {
+    throw new FilesystemError("Failed to read image dimensions.");
+  }
+
+  const width = metadata.width;
+  const height = metadata.height;
+  const aspectRatio = width / height;
+  const megapixels = (width * height) / 1000000;
+
+  return {
+    path: imagePath,
+    mime: mimeType,
+    bytes: inputBuffer.length,
+    width,
+    height,
+    aspectRatio,
+    megapixels: Number(megapixels.toFixed(2)),
+    channels: metadata.channels || 3,
+    hasAlpha: metadata.hasAlpha || false,
+    density: metadata.density,
+    orientation: metadata.orientation,
+    colorSpace: metadata.space,
+    format: metadata.format,
+    isProgressive: metadata.isProgressive,
+  };
+}
+
 export async function prepareImageForUpload({
   imagePath,
   downsize,
@@ -75,22 +136,9 @@ export async function prepareImageForUpload({
   maxWidth?: string;
   maxHeight?: string;
 }): Promise<ProcessedImage> {
-  const file = Bun.file(imagePath);
-  if (!(await file.exists())) {
-    throw new FilesystemError(`Image not found or not readable: ${imagePath}`);
-  }
-
-  const mimeType = getImageMimeType(imagePath);
-  const bytes = await file.arrayBuffer();
-  const inputBuffer = Buffer.from(bytes);
-
-  const shouldDownsize = Boolean(downsize || maxWidth || maxHeight);
-  
-  // If we don't need to downsize, we can just return the original if it's already one of the supported types
-  // and we don't need metadata for the output. But the plan says we should include meta.image.original/processed.
-  
+  const mimeType = await validateImageFile(imagePath);
   const sharp = await loadSharp();
-  const image = sharp(inputBuffer);
+  const image = sharp(imagePath);
   const metadata = await image.metadata();
 
   if (!metadata.width || !metadata.height) {
@@ -98,10 +146,12 @@ export async function prepareImageForUpload({
   }
 
   const originalMeta: ImageMetadata = { width: metadata.width, height: metadata.height };
+  const shouldDownsize = Boolean(downsize || maxWidth || maxHeight);
 
   if (!shouldDownsize) {
+    const buffer = await image.toBuffer();
     return {
-      imageBase64: inputBuffer.toString("base64"),
+      imageBase64: buffer.toString("base64"),
       mimeType,
       original: originalMeta,
       processed: { ...originalMeta, resized: false }
@@ -126,15 +176,16 @@ export async function prepareImageForUpload({
     (heightLimit !== undefined && heightLimit < metadata.height);
 
   if (!needsResize) {
+    const buffer = await image.toBuffer();
     return {
-      imageBase64: inputBuffer.toString("base64"),
+      imageBase64: buffer.toString("base64"),
       mimeType,
       original: originalMeta,
       processed: { ...originalMeta, resized: false }
     };
   }
 
-  let pipeline = sharp(inputBuffer)
+  let pipeline = sharp(imagePath)
     .rotate()
     .resize({
       width: widthLimit,

@@ -25,10 +25,11 @@ bun install
 eikon <command> [options]
 
 Commands:
-  analyze   Analyze an image with a prompt/preset (default command)
-  presets   List/show prompt presets
-  config    Manage config (init/show/path)
-  help      Show help for a command
+  analyze       Analyze an image with a prompt/preset (default command)
+  analyze:local Show local image information (no LLM)
+  presets       List/show prompt presets
+  config        Manage config (init/show/path)
+  help          Show help for a command
 ```
 
 ### Examples
@@ -72,6 +73,11 @@ cat ./openrouter.key | eikon ./image.png --preset web-ui --api-key-stdin
 
 # Prompt via stdin
 cat prompt.txt | eikon ./image.png --preset web-ui --prompt-stdin
+
+# Get local image info (no LLM)
+eikon analyze:local ./image.png
+eikon analyze:local ./image.png --plain
+eikon analyze:local ./image.png --json
 ```
 
 ## Output behavior

@@ -177,3 +177,41 @@ test("eikon config show --json redacts API key", async () => {
     expect(parsed.config.apiKey).toBe("********");
   }
 });
+
+test("eikon analyze:local shows human-readable output", async () => {
+  const { code, stdout } = await runEikon(["analyze:local", FIXTURE_PATH]);
+  expect(code).toBe(0);
+  expect(stdout).toContain("image/png");
+  expect(stdout).toContain("3168");
+  expect(stdout).toContain("2774");
+});
+
+test("eikon analyze:local --plain shows stable output", async () => {
+  const { code, stdout } = await runEikon(["analyze:local", FIXTURE_PATH, "--plain"]);
+  expect(code).toBe(0);
+  expect(stdout).toContain("Path:");
+  expect(stdout).toContain("MIME:");
+  expect(stdout).toContain("Width:");
+  expect(stdout).toContain("Height:");
+});
+
+test("eikon analyze:local --json shows full metadata", async () => {
+  const { code, stdout } = await runEikon(["analyze:local", FIXTURE_PATH, "--json"]);
+  expect(code).toBe(0);
+  const parsed = JSON.parse(stdout);
+  expect(parsed.ok).toBe(true);
+  expect(parsed.info).toBeDefined();
+  expect(parsed.info.path).toBe(FIXTURE_PATH);
+  expect(parsed.info.mime).toBe("image/png");
+  expect(parsed.info.width).toBe(3168);
+  expect(parsed.info.height).toBe(2774);
+  expect(parsed.info.bytes).toBeGreaterThan(0);
+  expect(parsed.info.aspectRatio).toBeGreaterThan(0);
+  expect(parsed.info.megapixels).toBeGreaterThan(8);
+});
+
+test("eikon analyze:local handles missing image (exit 5)", async () => {
+  const { code, stderr } = await runEikon(["analyze:local", "non-existent.png"]);
+  expect(code).toBe(5);
+  expect(stderr).toContain("error: Image not found or not readable");
+});

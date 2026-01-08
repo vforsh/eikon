@@ -2,6 +2,7 @@ import { Command } from "commander";
 import { analyzeCommand } from "./commands/analyze";
 import { presetsListCommand, presetsShowCommand } from "./commands/presets";
 import { configInitCommand, configPathCommand, configShowCommand } from "./commands/config";
+import { analyzeLocalCommand } from "./commands/analyze_local";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -13,13 +14,14 @@ export async function createProgram() {
     .description("Analyze images with vision models")
     .version("0.1.0")
     .addHelpText("before", `
-Examples:
-  eikon analyze screenshot.png "What is this?"
-  eikon screenshot.png --preset web-ui
-  eikon screenshot.png --json --max-width 1024
-  eikon presets list --plain
-  eikon config init
-`);
+ Examples:
+   eikon analyze screenshot.png "What is this?"
+   eikon screenshot.png --preset web-ui
+   eikon screenshot.png --json --max-width 1024
+   eikon analyze:local screenshot.png
+   eikon presets list --plain
+   eikon config init
+ `);
 
   program
     .command("analyze", { isDefault: true })
@@ -43,15 +45,31 @@ Examples:
     .option("--max-height <px|x0.5>", "Downsize max height")
     .option("--timeout <ms>", "Request timeout in ms")
     .addHelpText("before", `
-Examples:
-  eikon analyze screenshot.png "Describe this UI"
-  eikon analyze screenshot.png --preset web-ui
-  eikon analyze screenshot.png --prompt-stdin < prompt.txt
-  eikon analyze screenshot.png --api-key-file .key --json
-  eikon analyze screenshot.png --max-width 1600 --downsize
+ Examples:
+   eikon analyze screenshot.png "Describe this UI"
+   eikon analyze screenshot.png --preset web-ui
+   eikon analyze screenshot.png --prompt-stdin < prompt.txt
+   eikon analyze screenshot.png --api-key-file .key --json
+   eikon analyze screenshot.png --max-width 1600 --downsize
 `)
     .action(async (image, prompt, options) => {
       await analyzeCommand(image, prompt, options);
+    });
+
+  program
+    .command("analyze:local")
+    .description("Show local image information (no LLM)")
+    .argument("<image>", "Path to image file (png/jpg/webp)")
+    .option("--plain", "Stable plain-text output")
+    .option("--json", "JSON output")
+    .addHelpText("before", `
+  Examples:
+    eikon analyze:local screenshot.png
+    eikon analyze:local screenshot.png --plain
+    eikon analyze:local screenshot.png --json
+`)
+    .action(async (image, options) => {
+      await analyzeLocalCommand(image, options);
     });
 
   const presets = program.command("presets").description("List/show prompt presets");
