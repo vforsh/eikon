@@ -6,11 +6,12 @@ const MOCK_RESPONSE = "EIKON_E2E_MOCK_RESPONSE";
 const FIXTURE_PATH = join(import.meta.dir, "..", "fixtures", "e2e-app.png");
 const TEST_CONFIG_PATH = join(tmpdir(), `eikon-test-config-${Date.now()}.toml`);
 
-async function runEikon(args: string[], env: Record<string, string> = {}) {
+async function runEikon(args: string[], env: Record<string, string> = {}, stdin?: string) {
   const proc = Bun.spawn({
     cmd: ["./index.ts", ...args],
     stdout: "pipe",
     stderr: "pipe",
+    stdin: stdin ? "pipe" : undefined,
     env: {
       ...process.env,
       OPENROUTER_API_KEY: "test-key",
@@ -19,6 +20,11 @@ async function runEikon(args: string[], env: Record<string, string> = {}) {
       ...env,
     },
   });
+
+  if (stdin && proc.stdin) {
+    proc.stdin.write(stdin);
+    proc.stdin.end();
+  }
 
   const [stdout, stderr] = await Promise.all([
     new Response(proc.stdout).text(),
@@ -214,4 +220,83 @@ test("eikon analyze:local handles missing image (exit 5)", async () => {
   const { code, stderr } = await runEikon(["analyze:local", "non-existent.png"]);
   expect(code).toBe(5);
   expect(stderr).toContain("error: Image not found or not readable");
+});
+
+test("eikon save from stdin works", async () => {
+  const bytes = await Bun.file(FIXTURE_PATH).arrayBuffer();
+  const b64 = Buffer.from(bytes).toString("base64");
+  const dataUrl = `data:image/png;base64,${b64}`;
+  const input = `Some prefix text "${dataUrl}" and suffix.`;
+  const outPath = join(tmpdir(), `eikon-save-stdin-${Date.now()}.png`);
+
+  const { code, stdout, stderr } = await runEikon(["save", "--out", outPath], {}, input);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+  expect(stdout).toContain(`Path: ${outPath}`);
+  expect(stdout).toContain("MIME: image/png");
+  expect(stdout).toContain("Width: 3168");
+  expect(stdout).toContain("Height: 2774");
+
+  const savedBytes = await Bun.file(outPath).arrayBuffer();
+  expect(savedBytes.byteLength).toBe(bytes.byteLength);
+});
+
+test("eikon save from --input works", async () => {
+  const bytes = await Bun.file(FIXTURE_PATH).arrayBuffer();
+  const b64 = Buffer.from(bytes).toString("base64");
+  const dataUrl = `data:image/png;base64,${b64}`;
+  const inputPath = join(tmpdir(), `eikon-save-input-${Date.now()}.txt`);
+  await Bun.write(inputPath, `DATA: ${dataUrl}`);
+  const outPath = join(tmpdir(), `eikon-save-out-${Date.now()}.png`);
+
+  const { code, stdout } = await runEikon(["save", "--input", inputPath, "--out", outPath]);
+
+  expect(code).toBe(0);
+  expect(stdout).toContain(`Path: ${outPath}`);
+  const savedBytes = await Bun.file(outPath).arrayBuffer();
+  expect(savedBytes.byteLength).toBe(bytes.byteLength);
+});
+
+test("eikon save --json works", async () => {
+  const bytes = await Bun.file(FIXTURE_PATH).arrayBuffer();
+  const b64 = Buffer.from(bytes).toString("base64");
+  const dataUrl = `data:image/png;base64,${b64}`;
+  const outPath = join(tmpdir(), `eikon-save-json-${Date.now()}.png`);
+
+  const { code, stdout } = await runEikon(["save", "--out", outPath, "--json"], {}, dataUrl);
+
+  expect(code).toBe(0);
+  const parsed = JSON.parse(stdout);
+  expect(parsed.ok).toBe(true);
+  expect(parsed.info.path).toBe(outPath);
+  expect(parsed.info.width).toBe(3168);
+  expect(parsed.info.height).toBe(2774);
+});
+
+test("eikon save fails if multiple data URLs found (exit 2)", async () => {
+  const dataUrl = `data:image/png;base64,YmFzZTY0`;
+  const input = `${dataUrl} and ${dataUrl}`;
+  const outPath = join(tmpdir(), `eikon-save-fail-${Date.now()}.png`);
+
+  const { code, stderr } = await runEikon(["save", "--out", outPath], {}, input);
+
+  expect(code).toBe(2);
+  expect(stderr).toContain("error: Expected exactly one image data URL in input, found 2");
+});
+
+test("eikon save fails if output exists and no --force (exit 5)", async () => {
+  const bytes = await Bun.file(FIXTURE_PATH).arrayBuffer();
+  const b64 = Buffer.from(bytes).toString("base64");
+  const dataUrl = `data:image/png;base64,${b64}`;
+  const outPath = join(tmpdir(), `eikon-save-exists-${Date.now()}.png`);
+  await Bun.write(outPath, "existing");
+
+  const { code, stderr } = await runEikon(["save", "--out", outPath], {}, dataUrl);
+
+  expect(code).toBe(5);
+  expect(stderr).toContain("error: Output already exists");
+
+  const { code: codeForce } = await runEikon(["save", "--out", outPath, "--force"], {}, dataUrl);
+  expect(codeForce).toBe(0);
 });

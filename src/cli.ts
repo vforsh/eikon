@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import { analyzeCommand } from "./commands/analyze";
+import { saveCommand } from "./commands/save";
 import { presetsListCommand, presetsShowCommand } from "./commands/presets";
 import { configInitCommand, configPathCommand, configShowCommand } from "./commands/config";
 import { analyzeLocalCommand } from "./commands/analyze_local";
@@ -70,6 +71,23 @@ export async function createProgram() {
 `)
     .action(async (image, options) => {
       await analyzeLocalCommand(image, options);
+    });
+
+  program
+    .command("save")
+    .description("Save an image from piped dataURL or --input file")
+    .option("--input <file>", "Read input text from a file")
+    .requiredOption("--out <file>", "Output path for the image bytes")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .addHelpText("before", `
+  Examples:
+    argus eval ... | eikon save --out screenshot.png
+    eikon save --input dataurl.txt --out screenshot.png
+    eikon save --input dataurl.txt --out screenshot.png --force
+`)
+    .action(async (options) => {
+      await saveCommand(options);
     });
 
   const presets = program.command("presets").description("List/show prompt presets");

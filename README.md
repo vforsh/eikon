@@ -27,6 +27,7 @@ eikon <command> [options]
 Commands:
   analyze       Analyze an image with a prompt/preset (default command)
   analyze:local Show local image information (no LLM)
+  save          Save an image from piped dataURL or --input file
   presets       List/show prompt presets
   config        Manage config (init/show/path)
   help          Show help for a command
@@ -78,6 +79,14 @@ cat prompt.txt | eikon ./image.png --preset web-ui --prompt-stdin
 eikon analyze:local ./image.png
 eikon analyze:local ./image.png --plain
 eikon analyze:local ./image.png --json
+
+# Save an image from piped Argus/Playwright/etc dataURL output
+# This extracts the base64 payload, decodes it, and writes the bytes to a file.
+# Useful for saving screenshots from CI/E2E tools that output dataURLs.
+argus eval ... | eikon save --out screenshot.png
+eikon save --input dataurl.txt --out screenshot.png
+eikon save --input dataurl.txt --out screenshot.png --force
+eikon save --input dataurl.txt --out screenshot.png --json
 ```
 
 ## Output behavior

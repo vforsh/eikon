@@ -125,6 +125,20 @@ export async function getImageInfo(imagePath: string): Promise<LocalImageInfo> {
   };
 }
 
+export async function getImageInfoFromBuffer(buffer: Buffer): Promise<{ width: number; height: number }> {
+  const sharp = await loadSharp();
+  const metadata = await sharp(buffer).metadata();
+
+  if (!metadata.width || !metadata.height) {
+    throw new FilesystemError("Failed to read image dimensions from buffer.");
+  }
+
+  return {
+    width: metadata.width,
+    height: metadata.height,
+  };
+}
+
 export async function prepareImageForUpload({
   imagePath,
   downsize,
