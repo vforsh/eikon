@@ -6,6 +6,8 @@ import { configInitCommand, configPathCommand, configShowCommand } from "./comma
 import { analyzeLocalCommand } from "./commands/analyze_local";
 import { upscaleCommand } from "./commands/upscale";
 import { upscaleLocalCommand } from "./commands/upscale_local";
+import { generateCommand } from "./commands/generate";
+import { generateModelsCommand } from "./commands/generate_models";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -24,6 +26,7 @@ export async function createProgram() {
    eikon analyze:local screenshot.png
    eikon upscale screenshot.png --out screenshot@2x.png
    eikon upscale:local screenshot.png --out screenshot@2x.png --scale 2
+   eikon generate --prompt "Minimal icon of a cat" --out-dir ./out
    eikon presets list --plain
    eikon config init
  `);
@@ -143,6 +146,50 @@ export async function createProgram() {
 `)
     .action(async (image, options) => {
       await upscaleLocalCommand(image, options);
+    });
+
+  const generate = program
+    .command("generate")
+    .description("Generate an image from a text prompt")
+    .option("--prompt <text>", "Text prompt")
+    .option("--out-dir <dir>", "Output directory")
+    .option("--ref <abs-path|https-url>", "Reference image (absolute path or https URL)")
+    .option("--name <file>", "Output filename (within --out-dir)")
+    .option("--force", "Overwrite if output exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error diagnostics")
+    .option("--no-color", "Disable color")
+    .option("-m, --model <id>", "OpenRouter model ID")
+    .option("--api-key-file <path>", "Read API key from file")
+    .option("--api-key-stdin", "Read API key from stdin")
+    .option("--timeout <ms>", "Request timeout in ms")
+    .addHelpText("before", `
+  Examples:
+    eikon generate --prompt "Minimal icon of a cat" --out-dir ./out
+    eikon generate --prompt "Same style, new pose" --ref /abs/path/ref.png --out-dir ./out
+    eikon generate --prompt "Use this as composition reference" --ref https://example.com/ref.png --out-dir ./out --json
+    eikon generate models
+    eikon generate models --json
+`)
+    .action(async (options) => {
+      await generateCommand(options);
+    });
+
+  generate
+    .command("models")
+    .description("List OpenRouter models that support image generation")
+    .option("--json", "Output JSON array of model IDs")
+    .option("--api-key-file <path>", "Read API key from file (only if required)")
+    .option("--api-key-stdin", "Read API key from stdin (only if required)")
+    .option("--timeout <ms>", "Request timeout in ms")
+    .addHelpText("before", `
+  Examples:
+    eikon generate models
+    eikon generate models --json
+`)
+    .action(async (options) => {
+      await generateModelsCommand(options);
     });
 
   const presets = program.command("presets").description("List/show prompt presets");

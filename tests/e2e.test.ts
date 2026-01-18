@@ -286,6 +286,141 @@ test("eikon upscale:local rejects downscale (exit 2)", async () => {
   expect(stderr).toContain("error: Downscale not allowed");
 });
 
+test("eikon generate writes image to out-dir", async () => {
+  const outDir = join(tmpdir(), `eikon-generate-${Date.now()}`);
+  const { code, stdout, stderr } = await runEikon([
+    "generate",
+    "--prompt",
+    "Minimal icon of a cat",
+    "--out-dir",
+    outDir,
+    "--plain",
+  ]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+  expect(stdout).toContain("Path:");
+  expect(stdout).toContain("MIME:");
+  expect(stdout).toContain("Bytes:");
+
+  const lines = stdout.trim().split("\n");
+  const pathLine = lines.find((line) => line.startsWith("Path:"));
+  expect(pathLine).toBeDefined();
+  const outPath = pathLine!.slice("Path:".length).trim();
+  const file = Bun.file(outPath);
+  expect(await file.exists()).toBe(true);
+});
+
+test("eikon generate with local --ref writes image", async () => {
+  const outDir = join(tmpdir(), `eikon-generate-ref-${Date.now()}`);
+  const { code, stdout, stderr } = await runEikon([
+    "generate",
+    "--prompt",
+    "Same style, new pose",
+    "--ref",
+    FIXTURE_PATH,
+    "--out-dir",
+    outDir,
+    "--json",
+  ]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+
+  const parsed = JSON.parse(stdout);
+  expect(parsed.ok).toBe(true);
+  expect(parsed.ref.type).toBe("file");
+  expect(parsed.ref.value).toBe(FIXTURE_PATH);
+  const outFile = Bun.file(parsed.outPath);
+  expect(await outFile.exists()).toBe(true);
+});
+
+test("eikon generate with URL --ref works", async () => {
+  const bytes = await Bun.file(FIXTURE_PATH).arrayBuffer();
+  const server = Bun.serve({
+    port: 0,
+    fetch() {
+      return new Response(bytes, {
+        headers: { "Content-Type": "image/png" },
+      });
+    },
+  });
+
+  const outDir = join(tmpdir(), `eikon-generate-url-${Date.now()}`);
+  const url = `http://127.0.0.1:${server.port}/ref.png`;
+  const { code, stdout, stderr } = await runEikon([
+    "generate",
+    "--prompt",
+    "Use this as composition reference",
+    "--ref",
+    url,
+    "--out-dir",
+    outDir,
+    "--json",
+  ]);
+
+  server.stop();
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+  const parsed = JSON.parse(stdout);
+  expect(parsed.ok).toBe(true);
+  expect(parsed.ref.type).toBe("url");
+  expect(parsed.ref.value).toBe(url);
+  const outFile = Bun.file(parsed.outPath);
+  expect(await outFile.exists()).toBe(true);
+});
+
+test("eikon generate missing --prompt (exit 2)", async () => {
+  const outDir = join(tmpdir(), `eikon-generate-missing-${Date.now()}`);
+  const { code, stderr } = await runEikon([
+    "generate",
+    "--out-dir",
+    outDir,
+  ]);
+
+  expect(code).toBe(2);
+  expect(stderr).toContain("error: Missing --prompt");
+});
+
+test("eikon generate rejects relative --ref (exit 2)", async () => {
+  const outDir = join(tmpdir(), `eikon-generate-relref-${Date.now()}`);
+  const { code, stderr } = await runEikon([
+    "generate",
+    "--prompt",
+    "test",
+    "--ref",
+    "relative.png",
+    "--out-dir",
+    outDir,
+  ]);
+
+  expect(code).toBe(2);
+  expect(stderr).toContain("error: --ref path must be absolute");
+});
+
+test("eikon generate models lists image-gen models", async () => {
+  const { code, stdout, stderr } = await runEikon(["generate", "models"]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+
+  const lines = stdout.trim().split("\n");
+  expect(lines.length).toBeGreaterThan(0);
+  expect(lines).toContain("google/gemini-3-pro-image-preview");
+});
+
+test("eikon generate models --json returns JSON array", async () => {
+  const { code, stdout, stderr } = await runEikon(["generate", "models", "--json"]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+
+  const parsed = JSON.parse(stdout);
+  expect(Array.isArray(parsed)).toBe(true);
+  expect(parsed).toContain("google/gemini-3-pro-image-preview");
+});
+
 test("eikon save from stdin works", async () => {
   const bytes = await Bun.file(FIXTURE_PATH).arrayBuffer();
   const b64 = Buffer.from(bytes).toString("base64");

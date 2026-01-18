@@ -29,6 +29,7 @@ Commands:
   analyze:local Show local image information (no LLM)
   upscale       Upscale an image via OpenRouter image-edit
   upscale:local Upscale an image locally via sharp
+  generate      Generate an image from a text prompt
   save          Save an image from piped dataURL or --input file
   presets       List/show prompt presets
   config        Manage config (init/show/path)
@@ -90,6 +91,11 @@ eikon upscale ./image.png --out ./image@2x.png --width 2400 --json
 # Upscale locally via sharp
 eikon upscale:local ./image.png --out ./image@2x.png
 eikon upscale:local ./image.png --out ./image@2x.png --height 2400 --plain
+
+# Generate from a prompt (optional reference image)
+eikon generate --prompt "Minimal icon of a cat" --out-dir ./out
+eikon generate --prompt "Same style, new pose" --ref /abs/path/ref.png --out-dir ./out --json
+eikon generate --prompt "Use this as composition reference" --ref https://example.com/ref.png --out-dir ./out
 
 # Save an image from piped Argus/Playwright/etc dataURL output
 # This extracts the base64 payload, decodes it, and writes the bytes to a file.
@@ -153,6 +159,17 @@ If `--output <file>` is provided, the result is written to the file and **also**
 - Output modes:
   - default / `--plain`: path/mime/bytes/width/height (+ model for remote)
   - `--json`: `{ ok, outPath, mime, width, height, bytes, model?, timingMs? }`
+
+## Generating images
+
+- `eikon generate` creates an image from a text prompt, optionally guided by a reference image.
+- `eikon generate models` lists OpenRouter models that support image generation (one ID per line; `--json` for JSON array).
+- Required: `--prompt`, `--out-dir`
+- Optional: `--ref` accepts an absolute local path or a https:// URL (http:// allowed only for localhost).
+- Default model: `google/gemini-3-pro-image-preview`.
+- Output modes:
+  - default / `--plain`: path/mime/bytes/model (+ ref when provided)
+  - `--json`: `{ ok, outPath, mime, bytes, model, ref?, timingMs? }`
 
 ## Exit codes
 
