@@ -27,6 +27,8 @@ eikon <command> [options]
 Commands:
   analyze       Analyze an image with a prompt/preset (default command)
   analyze:local Show local image information (no LLM)
+  upscale       Upscale an image via OpenRouter image-edit
+  upscale:local Upscale an image locally via sharp
   save          Save an image from piped dataURL or --input file
   presets       List/show prompt presets
   config        Manage config (init/show/path)
@@ -80,6 +82,15 @@ eikon analyze:local ./image.png
 eikon analyze:local ./image.png --plain
 eikon analyze:local ./image.png --json
 
+# Upscale via OpenRouter image-edit (default model: google/gemini-2.5-flash-image)
+eikon upscale ./image.png --out ./image@2x.png
+eikon upscale ./image.png --out ./image@4x.png --scale 4
+eikon upscale ./image.png --out ./image@2x.png --width 2400 --json
+
+# Upscale locally via sharp
+eikon upscale:local ./image.png --out ./image@2x.png
+eikon upscale:local ./image.png --out ./image@2x.png --height 2400 --plain
+
 # Save an image from piped Argus/Playwright/etc dataURL output
 # This extracts the base64 payload, decodes it, and writes the bytes to a file.
 # Useful for saving screenshots from CI/E2E tools that output dataURLs.
@@ -95,9 +106,9 @@ eikon save --input dataurl.txt --out screenshot.png --json
 - **stderr**: diagnostics/errors (never required to parse for success)
 
 Output modes are mutually exclusive:
-- Default (human): prints the model response text
-- `--plain`: stable, line-oriented output (same text payload, no decorations)
-- `--json`: stable JSON object with `ok`, `text`, and `meta`
+- Default (human): prints a human-readable response (for `analyze`, this is the model response text)
+- `--plain`: stable, line-oriented output
+- `--json`: stable JSON object
 
 If `--output <file>` is provided, the result is written to the file and **also** printed to stdout (unless `--quiet` is set).
 
@@ -128,6 +139,20 @@ If `--output <file>` is provided, the result is written to the file and **also**
   - pixels (e.g. `1600`)
   - multipliers (e.g. `x0.5`, `x0.25`)
 - If the image is already within limits, **no resize/re-encode is performed**.
+
+## Upscaling images
+
+- `eikon upscale` uses OpenRouter chat-completions image output. Default model: `google/gemini-2.5-flash-image`.
+- Supported models (as of 2026-01-18):
+  - `google/gemini-2.5-flash-image`
+  - `google/gemini-3-pro-image-preview`
+  - `openai/gpt-5-image`
+  - `openai/gpt-5-image-mini`
+- Provide exactly one of `--scale`, `--width`, or `--height` (defaults to `--scale 2`).
+- Downscale is not allowed; target dimensions must be >= original.
+- Output modes:
+  - default / `--plain`: path/mime/bytes/width/height (+ model for remote)
+  - `--json`: `{ ok, outPath, mime, width, height, bytes, model?, timingMs? }`
 
 ## Exit codes
 

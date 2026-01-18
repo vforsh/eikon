@@ -4,6 +4,8 @@ import { saveCommand } from "./commands/save";
 import { presetsListCommand, presetsShowCommand } from "./commands/presets";
 import { configInitCommand, configPathCommand, configShowCommand } from "./commands/config";
 import { analyzeLocalCommand } from "./commands/analyze_local";
+import { upscaleCommand } from "./commands/upscale";
+import { upscaleLocalCommand } from "./commands/upscale_local";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -20,6 +22,8 @@ export async function createProgram() {
    eikon screenshot.png --preset web-ui
    eikon screenshot.png --json --max-width 1024
    eikon analyze:local screenshot.png
+   eikon upscale screenshot.png --out screenshot@2x.png
+   eikon upscale:local screenshot.png --out screenshot@2x.png --scale 2
    eikon presets list --plain
    eikon config init
  `);
@@ -88,6 +92,57 @@ export async function createProgram() {
 `)
     .action(async (options) => {
       await saveCommand(options);
+    });
+
+  program
+    .command("upscale")
+    .description("Upscale an image via OpenRouter image-edit models")
+    .argument("<image>", "Path to image file (png/jpg/webp)")
+    .requiredOption("--out <file>", "Output path for the image bytes")
+    .option("--scale <2|4>", "Scale factor (default 2)")
+    .option("--width <px>", "Target width (proportional)")
+    .option("--height <px>", "Target height (proportional)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error diagnostics")
+    .option("--no-color", "Disable color")
+    .option("-m, --model <id>", "OpenRouter model ID")
+    .option("--api-key-file <path>", "Read API key from file")
+    .option("--api-key-stdin", "Read API key from stdin")
+    .option("--timeout <ms>", "Request timeout in ms")
+    .addHelpText("before", `
+  Examples:
+    eikon upscale screenshot.png --out screenshot@2x.png
+    eikon upscale screenshot.png --out screenshot@2x.png --scale 4
+    eikon upscale screenshot.png --out screenshot@2x.png --width 2400
+    eikon upscale screenshot.png --out screenshot@2x.png --api-key-file .key --json
+`)
+    .action(async (image, options) => {
+      await upscaleCommand(image, options);
+    });
+
+  program
+    .command("upscale:local")
+    .description("Upscale an image locally via sharp")
+    .argument("<image>", "Path to image file (png/jpg/webp)")
+    .requiredOption("--out <file>", "Output path for the image bytes")
+    .option("--scale <2|4>", "Scale factor (default 2)")
+    .option("--width <px>", "Target width (proportional)")
+    .option("--height <px>", "Target height (proportional)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error diagnostics")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+  Examples:
+    eikon upscale:local screenshot.png --out screenshot@2x.png
+    eikon upscale:local screenshot.png --out screenshot@2x.png --scale 4
+    eikon upscale:local screenshot.png --out screenshot@2x.png --height 2400
+`)
+    .action(async (image, options) => {
+      await upscaleLocalCommand(image, options);
     });
 
   const presets = program.command("presets").description("List/show prompt presets");

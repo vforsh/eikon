@@ -1,6 +1,7 @@
 import { test, expect } from "bun:test";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { getImageInfo } from "../src/image";
 
 const MOCK_RESPONSE = "EIKON_E2E_MOCK_RESPONSE";
 const FIXTURE_PATH = join(import.meta.dir, "..", "fixtures", "e2e-app.png");
@@ -220,6 +221,69 @@ test("eikon analyze:local handles missing image (exit 5)", async () => {
   const { code, stderr } = await runEikon(["analyze:local", "non-existent.png"]);
   expect(code).toBe(5);
   expect(stderr).toContain("error: Image not found or not readable");
+});
+
+test("eikon upscale --json returns metadata", async () => {
+  const outPath = join(tmpdir(), `eikon-upscale-${Date.now()}.png`);
+  const info = await getImageInfo(FIXTURE_PATH);
+  const { code, stdout, stderr } = await runEikon([
+    "upscale",
+    FIXTURE_PATH,
+    "--out",
+    outPath,
+    "--scale",
+    "2",
+    "--json",
+  ]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+  const parsed = JSON.parse(stdout);
+  expect(parsed.ok).toBe(true);
+  expect(parsed.outPath).toBe(outPath);
+  expect(parsed.width).toBe(info.width * 2);
+  expect(parsed.height).toBe(info.height * 2);
+  expect(parsed.model).toBeDefined();
+});
+
+test("eikon upscale:local writes resized image", async () => {
+  const outPath = join(tmpdir(), `eikon-upscale-local-${Date.now()}.png`);
+  const info = await getImageInfo(FIXTURE_PATH);
+  const { code, stdout, stderr } = await runEikon([
+    "upscale:local",
+    FIXTURE_PATH,
+    "--out",
+    outPath,
+    "--scale",
+    "2",
+    "--json",
+  ]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+  const parsed = JSON.parse(stdout);
+  expect(parsed.ok).toBe(true);
+  expect(parsed.outPath).toBe(outPath);
+
+  const outInfo = await getImageInfo(outPath);
+  expect(outInfo.width).toBe(info.width * 2);
+  expect(outInfo.height).toBe(info.height * 2);
+});
+
+test("eikon upscale:local rejects downscale (exit 2)", async () => {
+  const info = await getImageInfo(FIXTURE_PATH);
+  const outPath = join(tmpdir(), `eikon-upscale-downscale-${Date.now()}.png`);
+  const { code, stderr } = await runEikon([
+    "upscale:local",
+    FIXTURE_PATH,
+    "--out",
+    outPath,
+    "--width",
+    String(info.width - 10),
+  ]);
+
+  expect(code).toBe(2);
+  expect(stderr).toContain("error: Downscale not allowed");
 });
 
 test("eikon save from stdin works", async () => {

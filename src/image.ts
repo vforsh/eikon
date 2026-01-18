@@ -32,7 +32,7 @@ export interface LocalImageInfo {
   isProgressive?: boolean;
 }
 
-async function loadSharp(): Promise<any> {
+export async function loadSharp(): Promise<any> {
   try {
     const mod: any = await import("sharp");
     return mod?.default ?? mod;
