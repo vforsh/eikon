@@ -1,6 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { DEFAULT_CONFIG_PATH, loadConfigFile, getEffectiveConfig } from "../config";
+import { DEFAULT_CONFIG_PATH, getEffectiveConfig, stringifyConfigToml } from "../config";
 import { renderHuman, renderJson, renderPlain } from "../output";
 import { ConfigError } from "../errors";
 
@@ -48,6 +48,6 @@ export async function configShowCommand(opts: { json?: boolean }) {
   if (opts.json) {
     renderJson({ ok: true, config: safeConfig });
   } else {
-    renderPlain(Bun.TOML.stringify(safeConfig as any));
+    renderPlain(stringifyConfigToml(safeConfig));
   }
 }

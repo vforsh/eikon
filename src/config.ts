@@ -11,6 +11,37 @@ export interface Config {
   timeoutMs?: number;
 }
 
+function escapeTomlString(value: string): string {
+  return value
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t");
+}
+
+export function stringifyConfigToml(config: Config): string {
+  const lines: string[] = [];
+
+  if (config.apiKey !== undefined) {
+    lines.push(`apiKey = "${escapeTomlString(config.apiKey)}"`);
+  }
+
+  if (config.model !== undefined) {
+    lines.push(`model = "${escapeTomlString(config.model)}"`);
+  }
+
+  if (config.timeoutMs !== undefined) {
+    lines.push(`timeoutMs = ${config.timeoutMs}`);
+  }
+
+  if (lines.length === 0) {
+    return "";
+  }
+
+  return `${lines.join("\n")}\n`;
+}
+
 export async function loadConfigFile(path: string = DEFAULT_CONFIG_PATH): Promise<Config> {
   const file = Bun.file(path);
   if (!(await file.exists())) {
