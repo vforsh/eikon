@@ -14,6 +14,17 @@ Default to using Bun instead of Node.js.
 - Use `bunx <package> <command>` instead of `npx <package> <command>`
 - Bun automatically loads .env, so don't use dotenv.
 
+## TODOs
+
+When the user asks to add a to-do, you MUST update `TODO.md` and place the new item in one of these sections:
+
+- High priority
+- Medium priority
+- Low priority
+- Nice to have (lowest priority)
+
+Each to-do must be a separate bullet point, written in 3–5 sentences max. The bullet must include the relevant files (or directories) that will be helpful to complete the to-do.
+
 ## APIs
 
 - `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
