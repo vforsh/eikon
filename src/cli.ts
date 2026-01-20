@@ -164,7 +164,6 @@ export async function createProgram() {
     .option("--font-family <name>", "Font family (default: sans-serif)")
     .option("--font-weight <weight>", "Font weight: normal, bold, or 100-900")
     .option("--font-size <px>", "Starting font size before auto-shrink")
-    .option("--font-file <path>", "Path to .ttf/.otf font file for embedding")
     .option("--padding <px>", "Inner padding for text fitting (default: 24)")
     .option("--force", "Overwrite if --out exists")
     .option("--json", "Output JSON")

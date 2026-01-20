@@ -106,9 +106,9 @@ eikon placeholder --out card.png -w 400 -h 300 --bg-color "#1a1a1a" --text "Card
 eikon placeholder --out custom.png -w 600 -h 400 --bg-color "#f0f0f0" \
   --text-color "#333333" --font-size 48 --font-weight bold
 
-# Embed custom font file
+# Typography tweaks
 eikon placeholder --out branded.png -w 800 -h 200 --bg-color "#000" \
-  --font-file ./fonts/Brand.ttf --text "Branded Text"
+  --font-family "Inter" --font-weight 600 --text "Branded Text"
 ```
 
 ### Write output to file

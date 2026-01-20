@@ -1,5 +1,5 @@
 import { resolve, dirname, extname } from "node:path";
-import { mkdir, access, constants } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { loadSharp } from "../image";
 import { UsageError, FilesystemError } from "../errors";
 import { renderJson, renderPlain } from "../output";
@@ -16,7 +16,6 @@ export interface PlaceholderOptions {
   fontFamily?: string;
   fontWeight?: string;
   fontSize?: string;
-  fontFile?: string;
   padding?: string;
   force?: boolean;
   json?: boolean;
@@ -36,7 +35,6 @@ interface FontConfig {
   family: string;
   weight: string;
   size: number;
-  embedData?: string; // Base64 encoded font data for embedding
 }
 
 /**
@@ -183,17 +181,6 @@ function buildTextSvg(
   // First line baseline offset from center
   const startY = (height - totalTextHeight) / 2 + font.size * 0.85;
 
-  const fontStyle = font.embedData
-    ? `<style>
-        @font-face {
-          font-family: "EmbeddedFont";
-          src: url(data:font/truetype;base64,${font.embedData});
-        }
-      </style>`
-    : "";
-
-  const fontFamily = font.embedData ? "EmbeddedFont" : font.family;
-
   const tspans = lines
     .map((line, i) => {
       const dy = i === 0 ? startY : font.size * lineHeight;
@@ -202,12 +189,11 @@ function buildTextSvg(
     .join("\n      ");
 
   return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-    ${fontStyle}
     <text
       x="50%"
       y="0"
       text-anchor="middle"
-      font-family="${escapeXml(fontFamily)}"
+      font-family="${escapeXml(font.family)}"
       font-weight="${font.weight}"
       font-size="${font.size}px"
       fill="${escapeXml(textColor)}"
@@ -299,7 +285,6 @@ export async function placeholderCommand(opts: PlaceholderOptions) {
   // Font configuration
   let fontFamily = opts.fontFamily ?? "sans-serif";
   let fontWeight = opts.fontWeight ?? "normal";
-  let fontEmbed: string | undefined;
 
   // Validate font weight
   const validWeights = ["normal", "bold", "100", "200", "300", "400", "500", "600", "700", "800", "900"];
@@ -307,29 +292,6 @@ export async function placeholderCommand(opts: PlaceholderOptions) {
     throw new UsageError(`Invalid font weight: "${fontWeight}"`, [
       "Valid values: normal, bold, 100-900",
     ]);
-  }
-
-  // Handle font file
-  if (opts.fontFile) {
-    const fontPath = resolve(opts.fontFile);
-    const fontExt = extname(fontPath).toLowerCase();
-
-    if (fontExt !== ".ttf" && fontExt !== ".otf") {
-      throw new UsageError(`Invalid font file extension: "${fontExt}"`, [
-        "Supported formats: .ttf, .otf",
-      ]);
-    }
-
-    try {
-      await access(fontPath, constants.R_OK);
-    } catch {
-      throw new FilesystemError(`Font file not found or not readable: ${fontPath}`);
-    }
-
-    const fontFile = Bun.file(fontPath);
-    const fontBuffer = await fontFile.arrayBuffer();
-    fontEmbed = Buffer.from(fontBuffer).toString("base64");
-    fontFamily = "EmbeddedFont";
   }
 
   // Determine initial font size
@@ -395,7 +357,6 @@ export async function placeholderCommand(opts: PlaceholderOptions) {
     family: fontFamily,
     weight: fontWeight,
     size: finalFontSize,
-    embedData: fontEmbed,
   };
 
   const svg = buildTextSvg(width, height, lines, textColor, fontConfig);
@@ -436,7 +397,7 @@ export async function placeholderCommand(opts: PlaceholderOptions) {
     text: rawText,
     textColor,
     font: {
-      family: opts.fontFile ? "(embedded)" : fontFamily,
+      family: fontFamily,
       weight: fontWeight,
       size: finalFontSize,
     },
