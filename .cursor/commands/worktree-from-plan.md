@@ -6,9 +6,10 @@ Create a new git worktree for an implementation/refactor plan using the repo's W
 
 The user should provide:
 
-- A plan file reference (required):
+- A plan file reference (recommended):
     - Repo-relative path (recommended): `@tasks/plan.md`
     - Absolute path (also allowed): `/abs/path/to/your/repo/tasks/plan.md`
+    - If omitted: find the latest `*.md` file in `tasks/` (by modified date) and use it.
 - An optional post-create action (optional): e.g. `cursor` or `codex`
 
 Examples:
@@ -77,50 +78,38 @@ Do not block on a dirty working tree. If there are uncommitted changes, warn bri
 
 7. Print commands
 
-Always print all following commands as fenced code blocks (note triple backticks). Replace `NEW_DIR` and `PLAN_REL_PATH` with the values derived above.
+Always print all following commands as fenced code blocks (note triple backticks). ALWAYS preface each fenced code block with the editor title in bold (e.g. **Cursor**). Replace `NEW_DIR` and `PLAN_REL_PATH` with the values derived above.
 
-- Cursor:
+**Cursor**
 
 ```
 cursor NEW_DIR
 ```
 
-- Codex:
+**Codex**
 
 ```
 codex --yolo --cd NEW_DIR "execute PLAN_REL_PATH"
 ```
 
-- Claude Code:
+**Claude Code**
 
 ```
 cd NEW_DIR && claude --dangerously-skip-permissions "execute PLAN_REL_PATH"
 ```
 
-- OpenCode:
+**OpenCode**
 
 ```
-cd NEW_DIR && opencode run "execute PLAN_REL_PATH"
+cd NEW_DIR && opencode --prompt "execute PLAN_REL_PATH"
 ```
 
-- Amp:
+**Amp**
 
 ```
-cd NEW_DIR && amp --dangerously-allow-all -x "execute PLAN_REL_PATH"
+cd NEW_DIR && echo "execute PLAN_REL_PATH" | amp
 ```
 
 Notes:
 
 - `PLAN_REL_PATH` is the **repo-relative path** derived in step 2 (e.g. `tasks/impl-plan-editorctl-discover.md`).
-
-8. Execution options
-
-Present the available tools as a numbered list and ask which one the user would like to execute:
-
-1. **Cursor**: `cursor NEW_DIR`
-2. **Codex**: `codex --yolo --cd NEW_DIR "execute PLAN_REL_PATH"`
-3. **Claude Code**: `cd NEW_DIR && claude --dangerously-skip-permissions "execute PLAN_REL_PATH"`
-4. **OpenCode**: `cd NEW_DIR && opencode run "execute PLAN_REL_PATH"`
-5. **Amp**: `cd NEW_DIR && amp --dangerously-allow-all -x "execute PLAN_REL_PATH"`
-
-End with: "Which of these would you like me to execute?"
