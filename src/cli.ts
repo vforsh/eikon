@@ -8,6 +8,7 @@ import { upscaleCommand } from "./commands/upscale";
 import { upscaleLocalCommand } from "./commands/upscale_local";
 import { generateCommand } from "./commands/generate";
 import { generateModelsCommand } from "./commands/generate_models";
+import { placeholderCommand } from "./commands/placeholder";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -27,6 +28,7 @@ export async function createProgram() {
    eikon upscale screenshot.png --out screenshot@2x.png
    eikon upscale:local screenshot.png --out screenshot@2x.png --scale 2
    eikon generate --prompt "Minimal icon of a cat" --out-dir ./out
+   eikon placeholder --w 1200 --h 630 --bg-color "#111827" --out placeholder.png
    eikon presets list --plain
    eikon config init
  `);
@@ -146,6 +148,37 @@ export async function createProgram() {
 `)
     .action(async (image, options) => {
       await upscaleLocalCommand(image, options);
+    });
+
+  program
+    .command("placeholder")
+    .description("Generate a placeholder image with solid background and text")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--width <px>", "Image width in pixels")
+    .option("--w <px>", "Image width in pixels (alias)")
+    .option("--height <px>", "Image height in pixels")
+    .option("--h <px>", "Image height in pixels (alias)")
+    .requiredOption("--bg-color <color>", "Background color (hex)")
+    .option("--text <string>", "Text to display (default: WxH, supports \\n for multiline)")
+    .option("--text-color <color>", "Text color (hex, default: auto contrast)")
+    .option("--font-family <name>", "Font family (default: sans-serif)")
+    .option("--font-weight <weight>", "Font weight: normal, bold, or 100-900")
+    .option("--font-size <px>", "Starting font size before auto-shrink")
+    .option("--font-file <path>", "Path to .ttf/.otf font file for embedding")
+    .option("--padding <px>", "Inner padding for text fitting (default: 24)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+  Examples:
+    eikon placeholder --w 1200 --h 630 --bg-color "#0B1220" --text "Hello" --out out.png
+    eikon placeholder --width 512 --height 512 --bg-color "#eee" --out ./512.png
+    eikon placeholder --w 800 --h 400 --bg-color "#111827" --text "Line 1\\nLine 2" --text-color "#F9FAFB" --out out.webp
+`)
+    .action(async (options) => {
+      await placeholderCommand(options);
     });
 
   const generate = program

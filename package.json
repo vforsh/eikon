@@ -19,7 +19,7 @@
   "dependencies": {
     "commander": "^14.0.2",
     "openai": "^6.15.0",
-    "sharp": "^0.34.4"
+    "sharp": "^0.34.5"
   },
   "devDependencies": {
     "@types/bun": "latest"
