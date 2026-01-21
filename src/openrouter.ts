@@ -3,8 +3,31 @@ import { AuthError, NetworkError } from "./errors";
 
 export interface OpenRouterModelSummary {
   id: string;
+  name?: string;
+  context_length?: number;
+  pricing?: {
+    prompt?: string;
+    completion?: string;
+    request?: string;
+    image?: string;
+  };
   architecture?: {
+    input_modalities?: string[];
     output_modalities?: string[];
+  };
+}
+
+export interface OpenRouterModelDetails {
+  id: string;
+  name?: string;
+  contextLength?: number;
+  inputModalities: string[];
+  outputModalities: string[];
+  pricing?: {
+    prompt?: string;
+    completion?: string;
+    request?: string;
+    image?: string;
   };
 }
 
@@ -247,29 +270,17 @@ export async function requestImageFromPrompt({
 }
 
 async function fetchOpenRouterModels({
-  apiKey,
   timeoutMs,
 }: {
-  apiKey?: string;
   timeoutMs?: number;
 }): Promise<OpenRouterModelSummary[]> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs ?? 30000);
 
   try {
-    const headers: Record<string, string> = {};
-    if (apiKey) {
-      headers["Authorization"] = `Bearer ${apiKey}`;
-    }
-
     const response = await fetch("https://openrouter.ai/api/v1/models", {
-      headers,
       signal: controller.signal,
     });
-
-    if (response.status === 401 || response.status === 403) {
-      throw new AuthError("OpenRouter /models requires authentication.");
-    }
 
     if (!response.ok) {
       throw new NetworkError(`OpenRouter /models failed: ${response.status} ${response.statusText}`);
@@ -378,31 +389,220 @@ export async function requestImageEditWithPreservation({
 }
 
 export async function listImageGenModels({
-  apiKey,
+  supportsRef,
   timeoutMs,
 }: {
-  apiKey?: string;
+  supportsRef?: boolean;
   timeoutMs?: number;
 }): Promise<string[]> {
-  if (process.env.EIKON_MOCK_OPENROUTER === "1") {
-    return [
-      "google/gemini-3-pro-image-preview",
-      "openai/gpt-5-image",
-      "openai/gpt-5-image-mini",
-    ].sort((a, b) => a.localeCompare(b));
-  }
+  const details = await listImageGenModelDetails({ supportsRef, timeoutMs });
+  return details.map((model) => model.id);
+}
 
-  const models = await fetchOpenRouterModels({ apiKey, timeoutMs });
-  const ids: string[] = [];
+export async function listImageGenModelDetails({
+  supportsRef,
+  timeoutMs,
+}: {
+  supportsRef?: boolean;
+  timeoutMs?: number;
+}): Promise<OpenRouterModelDetails[]> {
+  const models =
+    process.env.EIKON_MOCK_OPENROUTER === "1"
+      ? [
+          {
+            id: "google/gemini-3-pro-image-preview",
+            name: "Gemini 3 Pro Image Preview",
+            context_length: 32768,
+            pricing: {
+              prompt: "0.000000",
+              completion: "0.000000",
+              image: "0.000000",
+              request: "0",
+            },
+            architecture: {
+              input_modalities: ["text", "image"],
+              output_modalities: ["image"],
+            },
+          },
+          {
+            id: "openai/gpt-5-image",
+            name: "GPT-5 Image",
+            context_length: 131072,
+            pricing: {
+              prompt: "0.000010",
+              completion: "0.000030",
+              image: "0.000000",
+              request: "0",
+            },
+            architecture: {
+              input_modalities: ["text"],
+              output_modalities: ["image"],
+            },
+          },
+          {
+            id: "openai/gpt-5-image-mini",
+            name: "GPT-5 Image Mini",
+            context_length: 131072,
+            pricing: {
+              prompt: "0.000003",
+              completion: "0.000010",
+              image: "0.000000",
+              request: "0",
+            },
+            architecture: {
+              input_modalities: ["text", "image"],
+              output_modalities: ["image"],
+            },
+          },
+          {
+            id: "stability/sdxl-edit",
+            name: "SDXL Edit",
+            context_length: 2048,
+            pricing: {
+              prompt: "0.000000",
+              completion: "0.000000",
+              image: "0.000600",
+              request: "0",
+            },
+            architecture: {
+              input_modalities: ["image"],
+              output_modalities: ["image"],
+            },
+          },
+        ]
+      : await fetchOpenRouterModels({ timeoutMs });
+
+  return filterModelDetails(models, (model) => {
+    if (!model.inputModalities.includes("text")) return false;
+    if (!model.outputModalities.includes("image")) return false;
+    if (supportsRef && !model.inputModalities.includes("image")) return false;
+    return true;
+  });
+}
+
+export async function listImageEditModels({
+  timeoutMs,
+}: {
+  timeoutMs?: number;
+}): Promise<string[]> {
+  const details = await listImageEditModelDetails({ timeoutMs });
+  return details.map((model) => model.id);
+}
+
+export async function listImageEditModelDetails({
+  timeoutMs,
+}: {
+  timeoutMs?: number;
+}): Promise<OpenRouterModelDetails[]> {
+  const models =
+    process.env.EIKON_MOCK_OPENROUTER === "1"
+      ? [
+          {
+            id: "google/gemini-3-pro-image-preview",
+            name: "Gemini 3 Pro Image Preview",
+            context_length: 32768,
+            pricing: {
+              prompt: "0.000000",
+              completion: "0.000000",
+              image: "0.000000",
+              request: "0",
+            },
+            architecture: {
+              input_modalities: ["text", "image"],
+              output_modalities: ["image"],
+            },
+          },
+          {
+            id: "openai/gpt-5-image",
+            name: "GPT-5 Image",
+            context_length: 131072,
+            pricing: {
+              prompt: "0.000010",
+              completion: "0.000030",
+              image: "0.000000",
+              request: "0",
+            },
+            architecture: {
+              input_modalities: ["text"],
+              output_modalities: ["image"],
+            },
+          },
+          {
+            id: "openai/gpt-5-image-mini",
+            name: "GPT-5 Image Mini",
+            context_length: 131072,
+            pricing: {
+              prompt: "0.000003",
+              completion: "0.000010",
+              image: "0.000000",
+              request: "0",
+            },
+            architecture: {
+              input_modalities: ["text", "image"],
+              output_modalities: ["image"],
+            },
+          },
+          {
+            id: "stability/sdxl-edit",
+            name: "SDXL Edit",
+            context_length: 2048,
+            pricing: {
+              prompt: "0.000000",
+              completion: "0.000000",
+              image: "0.000600",
+              request: "0",
+            },
+            architecture: {
+              input_modalities: ["image"],
+              output_modalities: ["image"],
+            },
+          },
+        ]
+      : await fetchOpenRouterModels({ timeoutMs });
+
+  return filterModelDetails(models, (model) => {
+    if (!model.inputModalities.includes("image")) return false;
+    if (!model.outputModalities.includes("image")) return false;
+    return true;
+  });
+}
+
+function toModelDetails(model: OpenRouterModelSummary): OpenRouterModelDetails | null {
+  const id = typeof model?.id === "string" ? model.id.trim() : "";
+  if (!id) return null;
+  const input = model?.architecture?.input_modalities;
+  const output = model?.architecture?.output_modalities;
+  if (!Array.isArray(input) || !Array.isArray(output)) return null;
+
+  return {
+    id,
+    name: typeof model?.name === "string" ? model.name : undefined,
+    contextLength: typeof model?.context_length === "number" ? model.context_length : undefined,
+    inputModalities: input,
+    outputModalities: output,
+    pricing: model?.pricing
+      ? {
+          prompt: model.pricing.prompt,
+          completion: model.pricing.completion,
+          request: model.pricing.request,
+          image: model.pricing.image,
+        }
+      : undefined,
+  };
+}
+
+function filterModelDetails(
+  models: OpenRouterModelSummary[],
+  predicate: (model: OpenRouterModelDetails) => boolean
+): OpenRouterModelDetails[] {
+  const entries = new Map<string, OpenRouterModelDetails>();
 
   for (const model of models) {
-    const output = model?.architecture?.output_modalities;
-    if (!Array.isArray(output)) continue;
-    if (!output.includes("image")) continue;
-    if (typeof model?.id === "string" && model.id.trim()) {
-      ids.push(model.id);
-    }
+    const details = toModelDetails(model);
+    if (!details) continue;
+    if (!predicate(details)) continue;
+    entries.set(details.id, details);
   }
 
-  return Array.from(new Set(ids)).sort((a, b) => a.localeCompare(b));
+  return Array.from(entries.values()).sort((a, b) => a.id.localeCompare(b.id));
 }

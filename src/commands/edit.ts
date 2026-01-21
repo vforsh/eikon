@@ -45,6 +45,12 @@ const MOCK_PNG_BASE64 =
 export async function editCommand(image: string, opts: EditOptions) {
   const startTime = Date.now();
 
+  if (!image) {
+    throw new UsageError("Missing <image>.", [
+      "Provide the path to an image file (png/jpg/webp).",
+    ]);
+  }
+
   // Resolve image path
   const imagePath = isAbsolute(image) ? image : resolve(process.cwd(), image);
   const imageFile = Bun.file(imagePath);

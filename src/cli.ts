@@ -10,6 +10,7 @@ import { generateCommand } from "./commands/generate";
 import { generateModelsCommand } from "./commands/generate_models";
 import { placeholderCommand } from "./commands/placeholder";
 import { editCommand } from "./commands/edit";
+import { editModelsCommand } from "./commands/edit_models";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -182,11 +183,11 @@ export async function createProgram() {
       await placeholderCommand(options);
     });
 
-  program
+  const edit = program
     .command("edit")
     .description("Edit an image using AI with natural language instructions")
-    .argument("<image>", "Path to image file (png/jpg/webp)")
-    .requiredOption("--out <file>", "Output path for the edited image")
+    .argument("[image]", "Path to image file (png/jpg/webp)")
+    .option("--out <file>", "Output path for the edited image")
     .option("--prompt <text>", "Edit prompt (what to change)")
     .option("--prompt-stdin", "Read prompt from stdin")
     .option("--force", "Overwrite if --out exists")
@@ -204,6 +205,7 @@ export async function createProgram() {
     eikon edit ui.png --prompt "Change the button color to blue" --out ui-blue.png
     eikon edit screenshot.png --prompt "Blur the email addresses" --out redacted.png
     echo "Make it warmer" | eikon edit photo.png --prompt-stdin --out warm.png
+    eikon edit models
 `)
     .action(async (image, options) => {
       await editCommand(image, options);
@@ -232,6 +234,7 @@ export async function createProgram() {
     eikon generate --prompt "Use this as composition reference" --ref https://example.com/ref.png --out-dir ./out --json
     eikon generate models
     eikon generate models --json
+    eikon generate models --supports-ref
 `)
     .action(async (options) => {
       await generateCommand(options);
@@ -241,16 +244,34 @@ export async function createProgram() {
     .command("models")
     .description("List OpenRouter models that support image generation")
     .option("--json", "Output JSON array of model IDs")
-    .option("--api-key-file <path>", "Read API key from file (only if required)")
-    .option("--api-key-stdin", "Read API key from stdin (only if required)")
+    .option("--details", "Show concise model metadata")
+    .option("--supports-ref", "Filter models that accept image references")
     .option("--timeout <ms>", "Request timeout in ms")
     .addHelpText("before", `
   Examples:
     eikon generate models
     eikon generate models --json
+    eikon generate models --details
+    eikon generate models --supports-ref
 `)
     .action(async (options) => {
       await generateModelsCommand(options);
+    });
+
+  edit
+    .command("models")
+    .description("List OpenRouter models that support image editing")
+    .option("--json", "Output JSON array of model IDs")
+    .option("--details", "Show concise model metadata")
+    .option("--timeout <ms>", "Request timeout in ms")
+    .addHelpText("before", `
+  Examples:
+    eikon edit models
+    eikon edit models --json
+    eikon edit models --details
+`)
+    .action(async (options) => {
+      await editModelsCommand(options);
     });
 
   const presets = program.command("presets").description("List/show prompt presets");

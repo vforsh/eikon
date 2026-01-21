@@ -97,6 +97,9 @@ eikon upscale:local ./image.png --out ./image@2x.png --height 2400 --plain
 eikon generate --prompt "Minimal icon of a cat" --out-dir ./out
 eikon generate --prompt "Same style, new pose" --ref /abs/path/ref.png --out-dir ./out --json
 eikon generate --prompt "Use this as composition reference" --ref https://example.com/ref.png --out-dir ./out
+eikon generate models
+eikon generate models --details
+eikon generate models --supports-ref
 
 # Save an image from piped Argus/Playwright/etc dataURL output
 # This extracts the base64 payload, decodes it, and writes the bytes to a file.
@@ -165,6 +168,8 @@ If `--output <file>` is provided, the result is written to the file and **also**
 
 - `eikon generate` creates an image from a text prompt, optionally guided by a reference image.
 - `eikon generate models` lists OpenRouter models that support image generation (one ID per line; `--json` for JSON array).
+- `eikon generate models --details` prints concise metadata (modalities, context length, pricing).
+- `eikon generate models --supports-ref` filters to models that accept image references.
 - Required: `--prompt`, `--out-dir`
 - Optional: `--ref` accepts an absolute local path or a https:// URL (http:// allowed only for localhost).
 - Default model: `google/gemini-3-pro-image-preview`.
@@ -175,6 +180,8 @@ If `--output <file>` is provided, the result is written to the file and **also**
 ## Editing images
 
 - `eikon edit` modifies an existing image using natural language instructions.
+- `eikon edit models` lists OpenRouter models that support image editing.
+- `eikon edit models --details` prints concise metadata (modalities, context length, pricing).
 - Uses a system prompt that emphasizes preserving the original image while making targeted changes.
 - Required: `<image>`, `--prompt`, `--out`
 - Default model: `google/gemini-3-pro-image-preview`.
@@ -191,6 +198,10 @@ eikon edit screenshot.png --prompt "Blur the email addresses" --out redacted.png
 
 # Read prompt from stdin
 echo "Make it look warmer" | eikon edit photo.png --prompt-stdin --out warm.png
+
+# List edit-capable models
+eikon edit models
+eikon edit models --details
 ```
 
 - Output modes:

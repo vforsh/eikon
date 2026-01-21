@@ -1,9 +1,8 @@
-import { listImageGenModels, listImageGenModelDetails } from "../openrouter";
+import { listImageEditModels, listImageEditModelDetails } from "../openrouter";
 import { renderJson, renderPlain } from "../output";
 
-export interface GenerateModelsOptions {
+export interface EditModelsOptions {
   json?: boolean;
-  supportsRef?: boolean;
   details?: boolean;
   timeout?: string;
 }
@@ -20,16 +19,15 @@ function argvGetOptionValue(argv: string[], name: string): string | undefined {
   return argv[idx + 1];
 }
 
-export async function generateModelsCommand(opts: GenerateModelsOptions) {
+export async function editModelsCommand(opts: EditModelsOptions) {
   const argv = process.argv.slice(2);
   const json = Boolean(opts.json || argvHasFlag(argv, "--json"));
   const timeout = opts.timeout ?? argvGetOptionValue(argv, "--timeout");
-  const supportsRef = Boolean(opts.supportsRef || argvHasFlag(argv, "--supports-ref"));
   const details = Boolean(opts.details || argvHasFlag(argv, "--details"));
 
   const timeoutMs = timeout ? parseInt(timeout, 10) : undefined;
   if (details) {
-    const models = await listImageGenModelDetails({ timeoutMs, supportsRef });
+    const models = await listImageEditModelDetails({ timeoutMs });
     if (json) {
       renderJson(models);
       return;
@@ -38,7 +36,7 @@ export async function generateModelsCommand(opts: GenerateModelsOptions) {
     return;
   }
 
-  const ids = await listImageGenModels({ timeoutMs, supportsRef });
+  const ids = await listImageEditModels({ timeoutMs });
 
   if (json) {
     renderJson(ids);

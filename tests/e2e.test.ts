@@ -412,6 +412,62 @@ test("eikon generate models --json returns JSON array", async () => {
   expect(parsed).toContain("google/gemini-3-pro-image-preview");
 });
 
+test("eikon generate models --supports-ref filters for image input", async () => {
+  const { code, stdout, stderr } = await runEikon(["generate", "models", "--supports-ref"]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+
+  const lines = stdout.trim().split("\n");
+  expect(lines).toContain("google/gemini-3-pro-image-preview");
+  expect(lines).not.toContain("openai/gpt-5-image");
+});
+
+test("eikon generate models --details --json returns model details", async () => {
+  const { code, stdout, stderr } = await runEikon(["generate", "models", "--details", "--json"]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+
+  const parsed = JSON.parse(stdout);
+  expect(Array.isArray(parsed)).toBe(true);
+  expect(parsed[0]).toHaveProperty("id");
+  expect(parsed[0]).toHaveProperty("inputModalities");
+  expect(parsed[0]).toHaveProperty("outputModalities");
+});
+
+test("eikon edit models lists image-edit models", async () => {
+  const { code, stdout, stderr } = await runEikon(["edit", "models"]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+
+  const lines = stdout.trim().split("\n");
+  expect(lines.length).toBeGreaterThan(0);
+  expect(lines).toContain("stability/sdxl-edit");
+});
+
+test("eikon edit models --details prints concise metadata", async () => {
+  const { code, stdout, stderr } = await runEikon(["edit", "models", "--details"]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+  expect(stdout).toContain("ctx=");
+  expect(stdout).toContain("in=");
+  expect(stdout).toContain("out=");
+});
+
+test("eikon edit models --json returns JSON array", async () => {
+  const { code, stdout, stderr } = await runEikon(["edit", "models", "--json"]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+
+  const parsed = JSON.parse(stdout);
+  expect(Array.isArray(parsed)).toBe(true);
+  expect(parsed).toContain("stability/sdxl-edit");
+});
+
 test("eikon save from stdin works", async () => {
   const bytes = await Bun.file(FIXTURE_PATH).arrayBuffer();
   const b64 = Buffer.from(bytes).toString("base64");
