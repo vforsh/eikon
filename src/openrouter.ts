@@ -115,7 +115,11 @@ function decodeDataUrl(dataUrl: string): Buffer {
   if (!match) {
     throw new NetworkError("Unexpected image data URL format from the model.");
   }
-  return Buffer.from(match[2], "base64");
+  const base64 = match[2];
+  if (!base64) {
+    throw new NetworkError("Unexpected image data URL format from the model.");
+  }
+  return Buffer.from(base64, "base64");
 }
 
 export async function requestImageFromChat({
@@ -223,9 +227,14 @@ export async function requestImageFromPrompt({
       throw new NetworkError("Unexpected image data URL format from the model.");
     }
 
+    const mime = match[1];
+    const base64 = match[2];
+    if (!mime || !base64) {
+      throw new NetworkError("Unexpected image data URL format from the model.");
+    }
     return {
-      bytes: Buffer.from(match[2], "base64"),
-      mimeType: match[1],
+      bytes: Buffer.from(base64, "base64"),
+      mimeType: mime,
     };
   } catch (error: any) {
     if (error.status === 401) {
@@ -279,6 +288,92 @@ async function fetchOpenRouterModels({
     throw new NetworkError(`OpenRouter /models request failed: ${error?.message || String(error)}`);
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+const EDIT_SYSTEM_PROMPT = `You are an image editing assistant. Your task is to modify the provided image according to the user's instruction while preserving as much of the original image as possible.
+
+Guidelines:
+- Only make the specific changes requested
+- Preserve the original style, lighting, colors, and composition unless explicitly asked to change them
+- Keep unchanged areas identical to the original
+- Maintain the same resolution and aspect ratio
+- If the instruction is unclear, make minimal changes`;
+
+export async function requestImageEditWithPreservation({
+  apiKey,
+  model,
+  instruction,
+  mimeType,
+  imageBase64,
+  timeoutMs,
+}: {
+  apiKey: string;
+  model: string;
+  instruction: string;
+  mimeType: string;
+  imageBase64: string;
+  timeoutMs?: number;
+}): Promise<{ bytes: Buffer; mimeType: string }> {
+  const openai = new OpenAI({
+    apiKey,
+    baseURL: "https://openrouter.ai/api/v1",
+    timeout: timeoutMs,
+  });
+
+  try {
+    const response = await openai.chat.completions.create({
+      model,
+      modalities: ["image", "text"],
+      messages: [
+        {
+          role: "system",
+          content: EDIT_SYSTEM_PROMPT,
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: instruction },
+            {
+              type: "image_url",
+              image_url: { url: `data:${mimeType};base64,${imageBase64}` },
+            },
+          ],
+        },
+      ],
+    } as any);
+
+    const message: any = response.choices?.[0]?.message;
+    const imageUrl: string | undefined = message?.images?.[0]?.image_url?.url;
+    if (!imageUrl) {
+      throw new NetworkError("No image data received from the model.");
+    }
+
+    if (!imageUrl.startsWith("data:")) {
+      throw new NetworkError("Model returned a non-data URL image.");
+    }
+
+    const match = /^data:([^;]+);base64,(.*)$/.exec(imageUrl);
+    if (!match) {
+      throw new NetworkError("Unexpected image data URL format from the model.");
+    }
+
+    const mime = match[1];
+    const base64 = match[2];
+    if (!mime || !base64) {
+      throw new NetworkError("Unexpected image data URL format from the model.");
+    }
+    return {
+      bytes: Buffer.from(base64, "base64"),
+      mimeType: mime,
+    };
+  } catch (error: any) {
+    if (error.status === 401) {
+      throw new AuthError("Invalid API key provided for OpenRouter.");
+    }
+
+    const message = error.message || String(error);
+    throw new NetworkError(`OpenRouter API request failed: ${message}`);
   }
 }
 

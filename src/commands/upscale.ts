@@ -59,7 +59,7 @@ export async function upscaleCommand(imageArg: string, opts: UpscaleOptions) {
 
   const config = await getEffectiveConfig({
     apiKey,
-    model: opts.model,
+    upscaleModel: opts.model,
     timeoutMs: opts.timeout ? parseInt(opts.timeout, 10) : undefined,
   });
 
@@ -98,7 +98,7 @@ export async function upscaleCommand(imageArg: string, opts: UpscaleOptions) {
   } else {
     outputBytes = await requestImageFromChat({
       apiKey: config.apiKey,
-      model: config.model || "google/gemini-2.5-flash-image",
+      model: config.upscaleModel || config.model || "google/gemini-2.5-flash-image",
       prompt,
       mimeType: processed.mimeType,
       imageBase64: processed.imageBase64,
@@ -118,7 +118,7 @@ export async function upscaleCommand(imageArg: string, opts: UpscaleOptions) {
     width: target.width,
     height: target.height,
     bytes: outputBytes.length,
-    model: config.model || "google/gemini-2.5-flash-image",
+    model: config.upscaleModel || config.model || "google/gemini-2.5-flash-image",
     timingMs: {
       total: totalMs,
       request: requestMs,

@@ -48,7 +48,7 @@ export async function analyzeCommand(
 
   const config = await getEffectiveConfig({
     apiKey,
-    model: opts.model,
+    analyzeModel: opts.model,
     timeoutMs: opts.timeout ? parseInt(opts.timeout, 10) : undefined,
   });
 
@@ -104,7 +104,7 @@ export async function analyzeCommand(
   } else {
     text = await requestCompletion({
       apiKey: config.apiKey,
-      model: config.model || "google/gemini-3-flash-preview",
+      model: config.analyzeModel || config.model || "google/gemini-3-flash-preview",
       prompt,
       mimeType: processedImage.mimeType,
       imageBase64: processedImage.imageBase64,
@@ -118,7 +118,7 @@ export async function analyzeCommand(
     ok: true,
     text,
     meta: {
-      model: config.model || "google/gemini-3-flash-preview",
+      model: config.analyzeModel || config.model || "google/gemini-3-flash-preview",
       preset: opts.preset,
       image: {
         path: imagePath,

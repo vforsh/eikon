@@ -30,6 +30,7 @@ Commands:
   upscale       Upscale an image via OpenRouter image-edit
   upscale:local Upscale an image locally via sharp
   generate      Generate an image from a text prompt
+  edit          Edit an image using AI with natural language instructions
   save          Save an image from piped dataURL or --input file
   presets       List/show prompt presets
   config        Manage config (init/show/path)
@@ -171,6 +172,31 @@ If `--output <file>` is provided, the result is written to the file and **also**
   - default / `--plain`: path/mime/bytes/model (+ ref when provided)
   - `--json`: `{ ok, outPath, mime, bytes, model, ref?, timingMs? }`
 
+## Editing images
+
+- `eikon edit` modifies an existing image using natural language instructions.
+- Uses a system prompt that emphasizes preserving the original image while making targeted changes.
+- Required: `<image>`, `--prompt`, `--out`
+- Default model: `google/gemini-3-pro-image-preview`.
+
+```bash
+# Remove background
+eikon edit photo.png --prompt "Remove the background" --out photo-nobg.png
+
+# Change colors
+eikon edit ui.png --prompt "Change the button color to blue" --out ui-blue.png
+
+# Redact content
+eikon edit screenshot.png --prompt "Blur the email addresses" --out redacted.png
+
+# Read prompt from stdin
+echo "Make it look warmer" | eikon edit photo.png --prompt-stdin --out warm.png
+```
+
+- Output modes:
+  - default / `--plain`: path/mime/bytes/model/source
+  - `--json`: `{ ok, outPath, mime, bytes, model, source, timingMs }`
+
 ## Exit codes
 
 - `0`: success
@@ -211,7 +237,14 @@ Supported keys:
 ```toml
 apiKey = "sk-or-v1-..."
 model = "google/gemini-3-flash-preview"
+analyzeModel = "google/gemini-3-flash-preview"
+generateModel = "google/gemini-3-pro-image-preview"
+upscaleModel = "google/gemini-2.5-flash-image"
+editModel = "google/gemini-3-pro-image-preview"
 timeoutMs = 30000
 ```
 
 Precedence: flags > env > config.
+
+Notes:
+- `analyzeModel`, `generateModel`, `upscaleModel`, `editModel` override `model` for their respective commands.

@@ -108,6 +108,19 @@ function isLocalhost(hostname: string) {
 }
 
 async function fetchReferenceImage(refUrl: string, timeoutMs: number) {
+  const testRefPath = process.env.EIKON_TEST_REF_PATH;
+  if (testRefPath && process.env.EIKON_MOCK_OPENROUTER === "1") {
+    const file = Bun.file(testRefPath);
+    if (!(await file.exists())) {
+      throw new UsageError(`Test reference image not found: ${testRefPath}`);
+    }
+    const buffer = Buffer.from(await file.arrayBuffer());
+    return {
+      mimeType: getImageMimeType(testRefPath),
+      imageBase64: buffer.toString("base64"),
+    };
+  }
+
   let url: URL;
   try {
     url = new URL(refUrl);
@@ -204,7 +217,7 @@ export async function generateCommand(opts: GenerateOptions) {
 
   const config = await getEffectiveConfig({
     apiKey,
-    model: opts.model,
+    generateModel: opts.model,
     timeoutMs: opts.timeout ? parseInt(opts.timeout, 10) : undefined,
   });
 
@@ -265,7 +278,7 @@ export async function generateCommand(opts: GenerateOptions) {
   } else {
     const response = await requestImageFromPrompt({
       apiKey: config.apiKey,
-      model: config.model || DEFAULT_MODEL,
+      model: config.generateModel || config.model || DEFAULT_MODEL,
       prompt,
       ref: ref ? { mimeType: ref.mimeType, imageBase64: ref.imageBase64 } : undefined,
       timeoutMs: config.timeoutMs,
@@ -293,7 +306,7 @@ export async function generateCommand(opts: GenerateOptions) {
     outPath,
     mime: outputMime,
     bytes: outputBytes.length,
-    model: config.model || DEFAULT_MODEL,
+    model: config.generateModel || config.model || DEFAULT_MODEL,
     ref: ref ? { type: ref.type, value: ref.value } : undefined,
     timingMs: {
       total: totalMs,

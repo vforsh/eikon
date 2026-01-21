@@ -9,6 +9,7 @@ import { upscaleLocalCommand } from "./commands/upscale_local";
 import { generateCommand } from "./commands/generate";
 import { generateModelsCommand } from "./commands/generate_models";
 import { placeholderCommand } from "./commands/placeholder";
+import { editCommand } from "./commands/edit";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -28,6 +29,7 @@ export async function createProgram() {
    eikon upscale screenshot.png --out screenshot@2x.png
    eikon upscale:local screenshot.png --out screenshot@2x.png --scale 2
    eikon generate --prompt "Minimal icon of a cat" --out-dir ./out
+   eikon edit photo.png --prompt "Remove background" --out photo-nobg.png
    eikon placeholder --w 1200 --h 630 --bg-color "#111827" --out placeholder.png
    eikon presets list --plain
    eikon config init
@@ -178,6 +180,33 @@ export async function createProgram() {
 `)
     .action(async (options) => {
       await placeholderCommand(options);
+    });
+
+  program
+    .command("edit")
+    .description("Edit an image using AI with natural language instructions")
+    .argument("<image>", "Path to image file (png/jpg/webp)")
+    .requiredOption("--out <file>", "Output path for the edited image")
+    .option("--prompt <text>", "Edit prompt (what to change)")
+    .option("--prompt-stdin", "Read prompt from stdin")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error diagnostics")
+    .option("--no-color", "Disable color")
+    .option("-m, --model <id>", "OpenRouter model ID")
+    .option("--api-key-file <path>", "Read API key from file")
+    .option("--api-key-stdin", "Read API key from stdin")
+    .option("--timeout <ms>", "Request timeout in ms")
+    .addHelpText("before", `
+  Examples:
+    eikon edit photo.png --prompt "Remove the background" --out photo-nobg.png
+    eikon edit ui.png --prompt "Change the button color to blue" --out ui-blue.png
+    eikon edit screenshot.png --prompt "Blur the email addresses" --out redacted.png
+    echo "Make it warmer" | eikon edit photo.png --prompt-stdin --out warm.png
+`)
+    .action(async (image, options) => {
+      await editCommand(image, options);
     });
 
   const generate = program

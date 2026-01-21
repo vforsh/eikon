@@ -18,7 +18,15 @@ export async function configInitCommand(opts: { force?: boolean; print?: boolean
   const configDir = dirname(DEFAULT_CONFIG_PATH);
   await mkdir(configDir, { recursive: true });
   
-  const template = `# Eikon config\n#\n# apiKey = "sk-or-v1-..."\n# model = "google/gemini-3-flash-preview"\n# timeoutMs = 30000\n`;
+  const template =
+    `# Eikon config\n` +
+    `#\n` +
+    `# apiKey = "sk-or-v1-..."\n` +
+    `# model = "google/gemini-3-flash-preview"\n` +
+    `# analyzeModel = "google/gemini-3-flash-preview"\n` +
+    `# generateModel = "google/gemini-3-pro-image-preview"\n` +
+    `# upscaleModel = "google/gemini-2.5-flash-image"\n` +
+    `# timeoutMs = 30000\n`;
   await Bun.write(DEFAULT_CONFIG_PATH, template);
 
   if (opts.json) {

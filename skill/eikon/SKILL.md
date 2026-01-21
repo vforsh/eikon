@@ -1,6 +1,6 @@
 ---
 name: eikon
-description: Use the eikon CLI to analyze images with OpenRouter vision models, upscale images locally or via API, generate images from prompts, and save dataURL screenshots. Use when working with images, vision AI, or visual analysis tasks.
+description: Use the eikon CLI to analyze images with OpenRouter vision models, edit images with natural-language instructions, upscale images locally or via API, generate images from prompts, and save dataURL screenshots. Use when working with images, vision AI, or visual analysis tasks.
 compatibility: Requires Bun and an OpenRouter API key (env, file, stdin, or config).
 ---
 
@@ -10,6 +10,7 @@ compatibility: Requires Bun and an OpenRouter API key (env, file, stdin, or conf
 - **Local image info** without LLM (`eikon analyze:local`)
 - **Upscale images** via OpenRouter or locally (`eikon upscale`, `eikon upscale:local`)
 - **Generate images** from text prompts (`eikon generate`)
+- **Edit images** with natural-language instructions (`eikon edit`)
 - **Save screenshots** from dataURL output (`eikon save`)
 - **Create placeholder images** with text (`eikon placeholder`)
 - **Manage presets** and config (`eikon presets`, `eikon config`)
@@ -82,6 +83,17 @@ eikon generate --prompt "Use composition reference" --ref https://example.com/re
 eikon generate models  # List models that support image generation
 ```
 
+### Edit an image (AI)
+
+Edits an existing image using a natural-language instruction and writes the edited image to `--out`.
+
+```bash
+eikon edit photo.png --prompt "Remove the background" --out photo-nobg.png
+eikon edit ui.png --prompt "Change the primary button color to blue" --out ui-blue.png
+eikon edit screenshot.png --prompt "Blur the email addresses" --out redacted.png
+echo "Make it warmer" | eikon edit photo.png --prompt-stdin --out warm.png
+```
+
 ### Save from dataURL
 
 ```bash
@@ -141,6 +153,10 @@ eikon config init  # Creates ~/.config/eikon/config.toml
 ```toml
 apiKey = "sk-or-v1-..."
 model = "google/gemini-3-flash-preview"
+analyzeModel = "google/gemini-3-flash-preview"
+generateModel = "google/gemini-3-pro-image-preview"
+editModel = "google/gemini-3-pro-image-preview"
+upscaleModel = "google/gemini-2.5-flash-image"
 timeoutMs = 30000
 ```
 
@@ -150,7 +166,7 @@ Mutually exclusive:
 
 - **Default (human)**: human-readable response
 - **`--plain`**: stable, line-oriented output
-- **`--json`**: stable JSON object with `{ ok, text, meta }`
+- **`--json`**: stable JSON object (shape depends on command; e.g. `edit` includes `outPath`, `mime`, `bytes`, `model`, `source`, `timingMs`)
 
 ## Exit codes
 

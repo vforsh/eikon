@@ -336,30 +336,21 @@ test("eikon generate with local --ref writes image", async () => {
 });
 
 test("eikon generate with URL --ref works", async () => {
-  const bytes = await Bun.file(FIXTURE_PATH).arrayBuffer();
-  const server = Bun.serve({
-    port: 0,
-    fetch() {
-      return new Response(bytes, {
-        headers: { "Content-Type": "image/png" },
-      });
-    },
-  });
-
   const outDir = join(tmpdir(), `eikon-generate-url-${Date.now()}`);
-  const url = `http://127.0.0.1:${server.port}/ref.png`;
-  const { code, stdout, stderr } = await runEikon([
-    "generate",
-    "--prompt",
-    "Use this as composition reference",
-    "--ref",
-    url,
-    "--out-dir",
-    outDir,
-    "--json",
-  ]);
-
-  server.stop();
+  const url = "https://example.com/ref.png";
+  const { code, stdout, stderr } = await runEikon(
+    [
+      "generate",
+      "--prompt",
+      "Use this as composition reference",
+      "--ref",
+      url,
+      "--out-dir",
+      outDir,
+      "--json",
+    ],
+    { EIKON_TEST_REF_PATH: FIXTURE_PATH },
+  );
 
   expect(stderr.trim()).toBe("");
   expect(code).toBe(0);
