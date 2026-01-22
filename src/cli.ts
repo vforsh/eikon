@@ -11,6 +11,7 @@ import { generateModelsCommand } from "./commands/generate_models";
 import { placeholderCommand } from "./commands/placeholder";
 import { editCommand } from "./commands/edit";
 import { editModelsCommand } from "./commands/edit_models";
+import { openrouterGuardrailsCommand, openrouterKeysCommand } from "./commands/openrouter";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -34,6 +35,8 @@ export async function createProgram() {
    eikon placeholder --w 1200 --h 630 --bg-color "#111827" --out placeholder.png
    eikon presets list --plain
    eikon config init
+  eikon openrouter keys --api-key "$OPENROUTER_PROVISIONING_KEY"
+  eikon openrouter guardrails --json
  `);
 
   program
@@ -344,6 +347,38 @@ Examples:
 `)
     .action(async (options) => {
       await configShowCommand(options);
+    });
+
+  const openrouter = program
+    .command("openrouter")
+    .description("OpenRouter provisioning endpoints");
+
+  openrouter
+    .command("keys")
+    .description("List OpenRouter API keys (provisioning key required)")
+    .option("--api-key <key>", "OpenRouter provisioning API key")
+    .option("--json", "Output JSON")
+    .addHelpText("before", `
+Examples:
+  eikon openrouter keys --api-key "$OPENROUTER_PROVISIONING_KEY"
+  eikon openrouter keys --json
+`)
+    .action(async (options) => {
+      await openrouterKeysCommand(options);
+    });
+
+  openrouter
+    .command("guardrails")
+    .description("List OpenRouter guardrails (provisioning key required)")
+    .option("--api-key <key>", "OpenRouter provisioning API key")
+    .option("--json", "Output JSON")
+    .addHelpText("before", `
+Examples:
+  eikon openrouter guardrails --api-key "$OPENROUTER_PROVISIONING_KEY"
+  eikon openrouter guardrails --json
+`)
+    .action(async (options) => {
+      await openrouterGuardrailsCommand(options);
     });
 
   // Help command as first-class command

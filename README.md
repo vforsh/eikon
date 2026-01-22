@@ -12,6 +12,9 @@ Named after the Ancient Greek word “eikōn” (εἰκών), meaning “image,
   - `--api-key-file <path>`
   - `--api-key-stdin`
   - config file (`eikon config init`)
+- OpenRouter provisioning key for admin endpoints:
+  - `OPENROUTER_PROVISIONING_KEY` (env)
+  - `eikon openrouter <subcommand> --api-key <key>`
 
 ## Install (local)
 
@@ -34,6 +37,7 @@ Commands:
   save          Save an image from piped dataURL or --input file
   presets       List/show prompt presets
   config        Manage config (init/show/path)
+  openrouter    OpenRouter provisioning endpoints
   help          Show help for a command
 ```
 
@@ -108,6 +112,10 @@ argus eval ... | eikon save --out screenshot.png
 eikon save --input dataurl.txt --out screenshot.png
 eikon save --input dataurl.txt --out screenshot.png --force
 eikon save --input dataurl.txt --out screenshot.png --json
+
+# OpenRouter provisioning endpoints (requires provisioning key)
+eikon openrouter keys --api-key "$OPENROUTER_PROVISIONING_KEY"
+eikon openrouter guardrails --json
 ```
 
 ## Output behavior
@@ -211,6 +219,7 @@ eikon edit models --details
 ## Exit codes
 
 - `0`: success
+- `1`: external API error (OpenRouter admin endpoints)
 - `2`: usage / validation error
 - `3`: configuration error
 - `4`: authentication error (missing/invalid API key)
@@ -229,6 +238,7 @@ bun run test:e2e
 ## Environment
 
 - `OPENROUTER_API_KEY`: API key (can be overridden by `--api-key-file` / `--api-key-stdin`)
+- `OPENROUTER_PROVISIONING_KEY`: provisioning key for `openrouter` subcommands
 - `OPENROUTER_MODEL`: default model if `--model` is not set
 - `EIKON_TIMEOUT_MS`: default timeout (ms)
 - `NO_COLOR`: disable color output

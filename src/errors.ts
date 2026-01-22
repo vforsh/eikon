@@ -1,5 +1,6 @@
 export enum ExitCode {
   Success = 0,
+  ExternalError = 1,
   UsageError = 2,
   ConfigError = 3,
   AuthError = 4,

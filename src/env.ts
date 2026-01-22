@@ -2,6 +2,9 @@ export const ENV = {
   get OPENROUTER_API_KEY() {
     return process.env.OPENROUTER_API_KEY;
   },
+  get OPENROUTER_PROVISIONING_KEY() {
+    return process.env.OPENROUTER_PROVISIONING_KEY;
+  },
   get OPENROUTER_MODEL() {
     return process.env.OPENROUTER_MODEL;
   },
