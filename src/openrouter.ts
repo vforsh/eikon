@@ -200,13 +200,13 @@ export async function requestImageFromPrompt({
   apiKey,
   model,
   prompt,
-  ref,
+  refs,
   timeoutMs,
 }: {
   apiKey: string;
   model: string;
   prompt: string;
-  ref?: { mimeType: string; imageBase64: string };
+  refs?: { mimeType: string; imageBase64: string }[];
   timeoutMs?: number;
 }): Promise<{ bytes: Buffer; mimeType: string }> {
   const openai = new OpenAI({
@@ -216,11 +216,13 @@ export async function requestImageFromPrompt({
   });
 
   const content: any[] = [{ type: "text", text: prompt }];
-  if (ref) {
-    content.push({
-      type: "image_url",
-      image_url: { url: `data:${ref.mimeType};base64,${ref.imageBase64}` },
-    });
+  if (refs && refs.length > 0) {
+    for (const ref of refs) {
+      content.push({
+        type: "image_url",
+        image_url: { url: `data:${ref.mimeType};base64,${ref.imageBase64}` },
+      });
+    }
   }
 
   try {

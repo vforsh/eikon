@@ -1,4 +1,4 @@
-import { resolve, dirname, isAbsolute, parse } from "node:path";
+import { resolve, dirname, isAbsolute } from "node:path";
 import { mkdir } from "node:fs/promises";
 import { getEffectiveConfig } from "../config";
 import { prepareImageForUpload, getImageMimeType } from "../image";
@@ -11,9 +11,8 @@ const MAX_REF_BYTES = 20 * 1024 * 1024;
 
 export interface GenerateOptions {
   prompt?: string;
-  ref?: string;
-  outDir?: string;
-  name?: string;
+  ref?: string[];
+  out?: string;
   force?: boolean;
   json?: boolean;
   plain?: boolean;
@@ -30,7 +29,7 @@ function formatPlain(result: {
   mime: string;
   bytes: number;
   model: string;
-  ref?: { type: "file" | "url"; value: string };
+  refs?: { type: "file" | "url"; value: string }[];
 }) {
   const lines = [
     `Path: ${result.outPath}`,
@@ -38,65 +37,13 @@ function formatPlain(result: {
     `Bytes: ${result.bytes}`,
     `Model: ${result.model}`,
   ];
-  if (result.ref) {
-    const prefix = result.ref.type === "file" ? "file:" : "url:";
-    lines.push(`Ref: ${prefix}${result.ref.value}`);
+  if (result.refs && result.refs.length > 0) {
+    for (const ref of result.refs) {
+      const prefix = ref.type === "file" ? "file:" : "url:";
+      lines.push(`Ref: ${prefix}${ref.value}`);
+    }
   }
   return lines.join("\n");
-}
-
-function pad2(value: number) {
-  return value.toString().padStart(2, "0");
-}
-
-function defaultFilename(now = new Date()) {
-  const y = now.getFullYear();
-  const m = pad2(now.getMonth() + 1);
-  const d = pad2(now.getDate());
-  const hh = pad2(now.getHours());
-  const mm = pad2(now.getMinutes());
-  const ss = pad2(now.getSeconds());
-  return `eikon-${y}${m}${d}-${hh}${mm}${ss}.png`;
-}
-
-function withSuffix(baseName: string, index: number) {
-  const parsed = parse(baseName);
-  return `${parsed.name}-${index}${parsed.ext}`;
-}
-
-async function resolveOutputPath(
-  outDir: string,
-  name: string | undefined,
-  force: boolean | undefined,
-): Promise<string> {
-  if (name && (name.includes("/") || name.includes("\\"))) {
-    throw new UsageError("Invalid --name: must be a filename, not a path.");
-  }
-
-  const baseName = name || defaultFilename();
-  let outPath = resolve(outDir, baseName);
-  const outFile = Bun.file(outPath);
-
-  if (await outFile.exists()) {
-    if (force) {
-      return outPath;
-    }
-
-    if (name) {
-      throw new FilesystemError(`Output already exists: ${outPath}`, ["Pass --force to overwrite."]);
-    }
-
-    for (let i = 2; i <= 999; i += 1) {
-      const candidate = resolve(outDir, withSuffix(baseName, i));
-      if (!(await Bun.file(candidate).exists())) {
-        return candidate;
-      }
-    }
-
-    throw new FilesystemError(`Unable to find available output name in: ${outDir}`);
-  }
-
-  return outPath;
 }
 
 function isHttpUrl(value: string) {
@@ -199,8 +146,8 @@ export async function generateCommand(opts: GenerateOptions) {
     throw new UsageError("Missing --prompt.", ["Provide --prompt with a non-empty value."]);
   }
 
-  if (!opts.outDir) {
-    throw new UsageError("Missing --out-dir.", ["Provide --out-dir PATH."]);
+  if (!opts.out) {
+    throw new UsageError("Missing --out.", ["Provide --out PATH."]);
   }
 
   let apiKey: string | undefined;
@@ -228,37 +175,38 @@ export async function generateCommand(opts: GenerateOptions) {
     ]);
   }
 
-  let ref:
-    | {
-        type: "file" | "url";
-        value: string;
-        mimeType: string;
-        imageBase64: string;
-      }
-    | undefined;
+  const refs: {
+    type: "file" | "url";
+    value: string;
+    mimeType: string;
+    imageBase64: string;
+  }[] = [];
   let refFetchMs: number | undefined;
 
-  if (opts.ref) {
-    const refValue = opts.ref.trim();
-    if (!refValue) {
-      throw new UsageError("Invalid --ref: empty value.");
-    }
-
+  const refInputs = opts.ref ?? [];
+  if (refInputs.length > 0) {
     const refStart = Date.now();
-    if (isHttpUrl(refValue)) {
-      const fetched = await fetchReferenceImage(refValue, config.timeoutMs || 30000);
-      ref = { type: "url", value: refValue, ...fetched };
-    } else {
-      if (!isAbsolute(refValue)) {
-        throw new UsageError("--ref path must be absolute.");
+    for (const refValue of refInputs) {
+      const trimmed = refValue.trim();
+      if (!trimmed) {
+        throw new UsageError("Invalid --ref: empty value.");
       }
-      const processed = await prepareImageForUpload({ imagePath: refValue });
-      ref = {
-        type: "file",
-        value: refValue,
-        mimeType: processed.mimeType,
-        imageBase64: processed.imageBase64,
-      };
+
+      if (isHttpUrl(trimmed)) {
+        const fetched = await fetchReferenceImage(trimmed, config.timeoutMs || 30000);
+        refs.push({ type: "url", value: trimmed, ...fetched });
+      } else {
+        if (!isAbsolute(trimmed)) {
+          throw new UsageError("--ref path must be absolute.");
+        }
+        const processed = await prepareImageForUpload({ imagePath: trimmed });
+        refs.push({
+          type: "file",
+          value: trimmed,
+          mimeType: processed.mimeType,
+          imageBase64: processed.imageBase64,
+        });
+      }
     }
     refFetchMs = Date.now() - refStart;
   }
@@ -268,9 +216,9 @@ export async function generateCommand(opts: GenerateOptions) {
   let outputMime = "image/png";
 
   if (process.env.EIKON_MOCK_OPENROUTER === "1") {
-    if (ref) {
-      outputBytes = Buffer.from(ref.imageBase64, "base64");
-      outputMime = ref.mimeType;
+    if (refs.length > 0) {
+      outputBytes = Buffer.from(refs[0].imageBase64, "base64");
+      outputMime = refs[0].mimeType;
     } else {
       outputBytes = Buffer.from(MOCK_PNG_BASE64, "base64");
       outputMime = "image/png";
@@ -280,7 +228,7 @@ export async function generateCommand(opts: GenerateOptions) {
       apiKey: config.apiKey,
       model: config.generateModel || config.model || DEFAULT_MODEL,
       prompt,
-      ref: ref ? { mimeType: ref.mimeType, imageBase64: ref.imageBase64 } : undefined,
+      refs: refs.length > 0 ? refs.map((r) => ({ mimeType: r.mimeType, imageBase64: r.imageBase64 })) : undefined,
       timeoutMs: config.timeoutMs,
     });
     outputBytes = response.bytes;
@@ -290,9 +238,7 @@ export async function generateCommand(opts: GenerateOptions) {
   const requestMs = Date.now() - requestStart;
   const totalMs = Date.now() - startTime;
 
-  const outDir = resolve(opts.outDir);
-  await mkdir(outDir, { recursive: true });
-  const outPath = await resolveOutputPath(outDir, opts.name?.trim() || undefined, opts.force);
+  const outPath = resolve(opts.out);
 
   if ((await Bun.file(outPath).exists()) && !opts.force) {
     throw new FilesystemError(`Output already exists: ${outPath}`, ["Pass --force to overwrite."]);
@@ -307,7 +253,7 @@ export async function generateCommand(opts: GenerateOptions) {
     mime: outputMime,
     bytes: outputBytes.length,
     model: config.generateModel || config.model || DEFAULT_MODEL,
-    ref: ref ? { type: ref.type, value: ref.value } : undefined,
+    refs: refs.length > 0 ? refs.map((r) => ({ type: r.type, value: r.value })) : undefined,
     timingMs: {
       total: totalMs,
       request: requestMs,

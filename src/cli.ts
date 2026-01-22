@@ -29,7 +29,7 @@ export async function createProgram() {
    eikon analyze:local screenshot.png
    eikon upscale screenshot.png --out screenshot@2x.png
    eikon upscale:local screenshot.png --out screenshot@2x.png --scale 2
-   eikon generate --prompt "Minimal icon of a cat" --out-dir ./out
+   eikon generate --prompt "Minimal icon of a cat" --out ./cat.png
    eikon edit photo.png --prompt "Remove background" --out photo-nobg.png
    eikon placeholder --w 1200 --h 630 --bg-color "#111827" --out placeholder.png
    eikon presets list --plain
@@ -215,10 +215,9 @@ export async function createProgram() {
     .command("generate")
     .description("Generate an image from a text prompt")
     .option("--prompt <text>", "Text prompt")
-    .option("--out-dir <dir>", "Output directory")
-    .option("--ref <abs-path|https-url>", "Reference image (absolute path or https URL)")
-    .option("--name <file>", "Output filename (within --out-dir)")
-    .option("--force", "Overwrite if output exists")
+    .option("--out <file>", "Output path for the image")
+    .option("--ref <abs-path|https-url>", "Reference image (absolute path or https URL, repeatable)", (value: string, prev: string[]) => prev.concat(value), [] as string[])
+    .option("--force", "Overwrite if --out exists")
     .option("--json", "Output JSON")
     .option("--plain", "Stable plain-text output")
     .option("--quiet", "Suppress non-error diagnostics")
@@ -229,9 +228,10 @@ export async function createProgram() {
     .option("--timeout <ms>", "Request timeout in ms")
     .addHelpText("before", `
   Examples:
-    eikon generate --prompt "Minimal icon of a cat" --out-dir ./out
-    eikon generate --prompt "Same style, new pose" --ref /abs/path/ref.png --out-dir ./out
-    eikon generate --prompt "Use this as composition reference" --ref https://example.com/ref.png --out-dir ./out --json
+    eikon generate --prompt "Minimal icon of a cat" --out ./cat.png
+    eikon generate --prompt "Same style, new pose" --ref /abs/path/ref.png --out ./out.png
+    eikon generate --prompt "Combine these images" --ref /path/img1.png --ref /path/img2.png --out ./combined.png
+    eikon generate --prompt "Use this as composition reference" --ref https://example.com/ref.png --out ./out.png --json
     eikon generate models
     eikon generate models --json
     eikon generate models --supports-ref
