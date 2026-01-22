@@ -11,7 +11,7 @@ export enum ExitCode {
 
 export class EikonError extends Error {
   constructor(
-    public message: string,
+    public override message: string,
     public exitCode: ExitCode = ExitCode.InternalError,
     public hints: string[] = [],
     public type: string = "internal"

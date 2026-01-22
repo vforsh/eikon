@@ -3,7 +3,8 @@ import { getEffectiveConfig } from "../config";
 import { prepareImageForUpload } from "../image";
 import { requestCompletion } from "../openrouter";
 import { loadPresetPrompt, SUPPORTED_PRESETS } from "../presets";
-import { AnalysisResult, handleOutputPolicy } from "../output";
+import { handleOutputPolicy } from "../output";
+import type { AnalysisResult } from "../output";
 import { UsageError, AuthError } from "../errors";
 
 export interface AnalyzeOptions {

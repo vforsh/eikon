@@ -1,4 +1,4 @@
-import { resolve, dirname } from "node:path";
+import { resolve, dirname, parse } from "node:path";
 import { mkdir } from "node:fs/promises";
 import { getEffectiveConfig } from "../config";
 import { prepareImageForUpload } from "../image";
@@ -41,6 +41,33 @@ function formatPlain(result: {
   ].join("\n");
 }
 
+async function resolveOutputPath(outPath: string, force?: boolean) {
+  if (force) {
+    return { path: outPath, warned: false };
+  }
+
+  if (!(await Bun.file(outPath).exists())) {
+    return { path: outPath, warned: false };
+  }
+
+  const parsed = parse(outPath);
+  const match = parsed.name.match(/^(.*)_(\d+)$/);
+  const baseName = match ? match[1] : parsed.name;
+  let index = match ? Number(match[2]) + 1 : 2;
+
+  if (!Number.isFinite(index) || index < 2) {
+    index = 2;
+  }
+
+  while (true) {
+    const candidate = resolve(parsed.dir, `${baseName}_${index}${parsed.ext}`);
+    if (!(await Bun.file(candidate).exists())) {
+      return { path: candidate, warned: true };
+    }
+    index += 1;
+  }
+}
+
 export async function upscaleCommand(imageArg: string, opts: UpscaleOptions) {
   const startTime = Date.now();
   const imagePath = resolve(imageArg);
@@ -70,10 +97,11 @@ export async function upscaleCommand(imageArg: string, opts: UpscaleOptions) {
     ]);
   }
 
-  const outPath = resolve(opts.out);
-  const outFile = Bun.file(outPath);
-  if ((await outFile.exists()) && !opts.force) {
-    throw new FilesystemError(`Output already exists: ${outPath}`, ["Pass --force to overwrite."]);
+  const requestedOutPath = resolve(opts.out);
+  const resolvedOut = await resolveOutputPath(requestedOutPath, opts.force);
+
+  if (resolvedOut.warned) {
+    process.stderr.write(`warning: Output already exists, saving as: ${resolvedOut.path}\n`);
   }
 
   const processed = await prepareImageForUpload({ imagePath });
@@ -108,12 +136,12 @@ export async function upscaleCommand(imageArg: string, opts: UpscaleOptions) {
   const requestMs = Date.now() - requestStart;
   const totalMs = Date.now() - startTime;
 
-  await mkdir(dirname(outPath), { recursive: true });
-  await Bun.write(outPath, outputBytes);
+  await mkdir(dirname(resolvedOut.path), { recursive: true });
+  await Bun.write(resolvedOut.path, outputBytes);
 
   const result = {
     ok: true,
-    outPath,
+    outPath: resolvedOut.path,
     mime: processed.mimeType,
     width: target.width,
     height: target.height,

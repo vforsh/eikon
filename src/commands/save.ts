@@ -41,7 +41,15 @@ export async function saveCommand(opts: SaveOptions) {
     throw new UsageError(`Expected exactly one image data URL in input, found ${matches.length}`);
   }
 
-  const [_fullMatch, type, b64] = matches[0];
+  const match = matches[0];
+  if (!match) {
+    throw new UsageError("Expected a data:image/*;base64, payload in input");
+  }
+
+  const [_fullMatch, type, b64] = match;
+  if (!type || !b64) {
+    throw new UsageError("Failed to parse image data URL");
+  }
   const mime = `image/${type}`;
   const buffer = Buffer.from(b64, "base64");
 

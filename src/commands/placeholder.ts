@@ -48,9 +48,12 @@ function parseHexColor(color: string): ParsedColor {
 
   if (hex.length === 3) {
     // #RGB
-    r = parseInt(hex[0] + hex[0], 16);
-    g = parseInt(hex[1] + hex[1], 16);
-    b = parseInt(hex[2] + hex[2], 16);
+    const rHex = hex.charAt(0);
+    const gHex = hex.charAt(1);
+    const bHex = hex.charAt(2);
+    r = parseInt(rHex + rHex, 16);
+    g = parseInt(gHex + gHex, 16);
+    b = parseInt(bHex + bHex, 16);
   } else if (hex.length === 6) {
     // #RRGGBB
     r = parseInt(hex.slice(0, 2), 16);

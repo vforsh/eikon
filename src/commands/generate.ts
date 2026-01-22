@@ -1,9 +1,9 @@
-import { resolve, dirname, isAbsolute } from "node:path";
+import { resolve, dirname, isAbsolute, parse } from "node:path";
 import { mkdir } from "node:fs/promises";
 import { getEffectiveConfig } from "../config";
 import { prepareImageForUpload, getImageMimeType } from "../image";
 import { requestImageFromPrompt } from "../openrouter";
-import { AuthError, FilesystemError, NetworkError, UsageError } from "../errors";
+import { AuthError, NetworkError, UsageError } from "../errors";
 import { renderJson, renderPlain } from "../output";
 
 const DEFAULT_MODEL = "google/gemini-3-pro-image-preview";
@@ -52,6 +52,33 @@ function isHttpUrl(value: string) {
 
 function isLocalhost(hostname: string) {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+async function resolveOutputPath(outPath: string, force?: boolean) {
+  if (force) {
+    return { path: outPath, warned: false };
+  }
+
+  if (!(await Bun.file(outPath).exists())) {
+    return { path: outPath, warned: false };
+  }
+
+  const parsed = parse(outPath);
+  const match = parsed.name.match(/^(.*)_(\d+)$/);
+  const baseName = match ? match[1] : parsed.name;
+  let index = match ? Number(match[2]) + 1 : 2;
+
+  if (!Number.isFinite(index) || index < 2) {
+    index = 2;
+  }
+
+  while (true) {
+    const candidate = resolve(parsed.dir, `${baseName}_${index}${parsed.ext}`);
+    if (!(await Bun.file(candidate).exists())) {
+      return { path: candidate, warned: true };
+    }
+    index += 1;
+  }
 }
 
 async function fetchReferenceImage(refUrl: string, timeoutMs: number) {
@@ -216,9 +243,10 @@ export async function generateCommand(opts: GenerateOptions) {
   let outputMime = "image/png";
 
   if (process.env.EIKON_MOCK_OPENROUTER === "1") {
-    if (refs.length > 0) {
-      outputBytes = Buffer.from(refs[0].imageBase64, "base64");
-      outputMime = refs[0].mimeType;
+    const firstRef = refs[0];
+    if (firstRef) {
+      outputBytes = Buffer.from(firstRef.imageBase64, "base64");
+      outputMime = firstRef.mimeType;
     } else {
       outputBytes = Buffer.from(MOCK_PNG_BASE64, "base64");
       outputMime = "image/png";
@@ -238,18 +266,19 @@ export async function generateCommand(opts: GenerateOptions) {
   const requestMs = Date.now() - requestStart;
   const totalMs = Date.now() - startTime;
 
-  const outPath = resolve(opts.out);
+  const requestedOutPath = resolve(opts.out);
+  const resolvedOut = await resolveOutputPath(requestedOutPath, opts.force);
 
-  if ((await Bun.file(outPath).exists()) && !opts.force) {
-    throw new FilesystemError(`Output already exists: ${outPath}`, ["Pass --force to overwrite."]);
+  if (resolvedOut.warned) {
+    process.stderr.write(`warning: Output already exists, saving as: ${resolvedOut.path}\n`);
   }
 
-  await mkdir(dirname(outPath), { recursive: true });
-  await Bun.write(outPath, outputBytes);
+  await mkdir(dirname(resolvedOut.path), { recursive: true });
+  await Bun.write(resolvedOut.path, outputBytes);
 
   const result = {
     ok: true,
-    outPath,
+    outPath: resolvedOut.path,
     mime: outputMime,
     bytes: outputBytes.length,
     model: config.generateModel || config.model || DEFAULT_MODEL,
