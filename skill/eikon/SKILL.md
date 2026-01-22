@@ -77,9 +77,10 @@ eikon upscale:local ./image.png --out ./image@2x.png --height 2400
 ### Generate images
 
 ```bash
-eikon generate --prompt "Minimal icon of a cat" --out-dir ./out
-eikon generate --prompt "Same style, new pose" --ref /abs/path/ref.png --out-dir ./out
-eikon generate --prompt "Use composition reference" --ref https://example.com/ref.png --out-dir ./out
+eikon generate --prompt "Minimal icon of a cat" --out ./cat.png
+eikon generate --prompt "Same style, new pose" --ref /abs/path/ref.png --out ./out.png
+eikon generate --prompt "Combine these images" --ref /path/img1.png --ref /path/img2.png --out ./combined.png
+eikon generate --prompt "Use composition reference" --ref https://example.com/ref.png --out ./out.png
 eikon generate models  # List models that support image generation
 ```
 
