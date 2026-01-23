@@ -1,4 +1,10 @@
-import OpenAI from "openai";
+import { OpenRouter } from "@openrouter/sdk";
+import type {
+  ChatMessageContentItem,
+  ChatResponse,
+  Model,
+} from "@openrouter/sdk/models";
+import { UnauthorizedResponseError } from "@openrouter/sdk/models/errors";
 import { AuthError, NetworkError } from "./errors";
 import { loadAiPrompt } from "./ai-prompts";
 
@@ -50,6 +56,22 @@ export interface ImageEditRequestOptions {
   timeoutMs?: number;
 }
 
+function createClient(apiKey: string): OpenRouter {
+  return new OpenRouter({ apiKey });
+}
+
+function isUnauthorizedError(error: unknown): boolean {
+  return error instanceof UnauthorizedResponseError;
+}
+
+function wrapError(error: unknown): never {
+  if (isUnauthorizedError(error)) {
+    throw new AuthError("Invalid API key provided for OpenRouter.");
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  throw new NetworkError(`OpenRouter API request failed: ${message}`);
+}
+
 export async function requestCompletion({
   apiKey,
   model,
@@ -58,42 +80,39 @@ export async function requestCompletion({
   imageBase64,
   timeoutMs,
 }: RequestOptions): Promise<string> {
-  const openai = new OpenAI({
-    apiKey,
-    baseURL: "https://openrouter.ai/api/v1",
-    timeout: timeoutMs,
-  });
+  const client = createClient(apiKey);
 
   try {
-    const response = await openai.chat.completions.create({
-      model,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            {
-              type: "image_url",
-              image_url: { url: `data:${mimeType};base64,${imageBase64}` },
-            },
-          ],
-        },
-      ],
-    });
+    const response = await client.chat.send(
+      {
+        model,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "image_url",
+                imageUrl: { url: `data:${mimeType};base64,${imageBase64}` },
+              },
+            ],
+          },
+        ],
+      },
+      { timeoutMs }
+    );
 
     const text = response.choices?.[0]?.message?.content;
-    if (!text) {
+    if (!text || typeof text !== "string") {
       throw new NetworkError("No response content received from the model.");
     }
 
     return text;
-  } catch (error: any) {
-    if (error.status === 401) {
-      throw new AuthError("Invalid API key provided for OpenRouter.");
+  } catch (error) {
+    if (error instanceof AuthError || error instanceof NetworkError) {
+      throw error;
     }
-    
-    const message = error.message || String(error);
-    throw new NetworkError(`OpenRouter API request failed: ${message}`);
+    wrapError(error);
   }
 }
 
@@ -105,32 +124,51 @@ export async function requestImageEdit({
   mimeType,
   timeoutMs,
 }: ImageEditRequestOptions): Promise<Buffer> {
-  const openai = new OpenAI({
-    apiKey,
-    baseURL: "https://openrouter.ai/api/v1",
-    timeout: timeoutMs,
-  });
+  // The SDK doesn't have an images.edit endpoint, so we still need to use fetch directly
+  // or fall back to using OpenAI SDK for this specific endpoint
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs ?? 120000);
 
   try {
-    const file = new File([imageBytes], "input", { type: mimeType });
-    const response = await openai.images.edit({
-      model,
-      prompt,
-      image: file,
+    const formData = new FormData();
+    formData.append("model", model);
+    formData.append("prompt", prompt);
+    formData.append("image", new Blob([imageBytes], { type: mimeType }), "input");
+
+    const response = await fetch("https://openrouter.ai/api/v1/images/edits", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: formData,
+      signal: controller.signal,
     });
 
-    const b64 = response?.data?.[0]?.b64_json;
+    if (response.status === 401) {
+      throw new AuthError("Invalid API key provided for OpenRouter.");
+    }
+
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new NetworkError(`OpenRouter API request failed: ${response.status} ${response.statusText} ${text}`);
+    }
+
+    const json: any = await response.json();
+    const b64 = json?.data?.[0]?.b64_json;
     if (!b64) {
       throw new NetworkError("No image data received from the model.");
     }
     return Buffer.from(b64, "base64");
   } catch (error: any) {
-    if (error.status === 401) {
-      throw new AuthError("Invalid API key provided for OpenRouter.");
+    if (error instanceof AuthError || error instanceof NetworkError) {
+      throw error;
     }
-
-    const message = error.message || String(error);
-    throw new NetworkError(`OpenRouter API request failed: ${message}`);
+    if (error?.name === "AbortError") {
+      throw new NetworkError("OpenRouter API request timed out.");
+    }
+    wrapError(error);
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
@@ -154,32 +192,31 @@ export async function requestImageFromChat({
   imageBase64,
   timeoutMs,
 }: RequestOptions): Promise<Buffer> {
-  const openai = new OpenAI({
-    apiKey,
-    baseURL: "https://openrouter.ai/api/v1",
-    timeout: timeoutMs,
-  });
+  const client = createClient(apiKey);
 
   try {
-    const response = await openai.chat.completions.create({
-      model,
-      modalities: ["image", "text"],
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: prompt },
-            {
-              type: "image_url",
-              image_url: { url: `data:${mimeType};base64,${imageBase64}` },
-            },
-          ],
-        },
-      ],
-    } as any);
+    const response = (await client.chat.send(
+      {
+        model,
+        modalities: ["image", "text"],
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: prompt },
+              {
+                type: "image_url",
+                imageUrl: { url: `data:${mimeType};base64,${imageBase64}` },
+              },
+            ],
+          },
+        ],
+      },
+      { timeoutMs }
+    )) as ChatResponse;
 
-    const message: any = response.choices?.[0]?.message;
-    const imageUrl: string | undefined = message?.images?.[0]?.image_url?.url;
+    const message = response.choices?.[0]?.message;
+    const imageUrl: string | undefined = (message as any)?.images?.[0]?.imageUrl?.url;
     if (!imageUrl) {
       throw new NetworkError("No image data received from the model.");
     }
@@ -187,13 +224,11 @@ export async function requestImageFromChat({
       return decodeDataUrl(imageUrl);
     }
     throw new NetworkError("Model returned a non-data URL image.");
-  } catch (error: any) {
-    if (error.status === 401) {
-      throw new AuthError("Invalid API key provided for OpenRouter.");
+  } catch (error) {
+    if (error instanceof AuthError || error instanceof NetworkError) {
+      throw error;
     }
-
-    const message = error.message || String(error);
-    throw new NetworkError(`OpenRouter API request failed: ${message}`);
+    wrapError(error);
   }
 }
 
@@ -210,36 +245,35 @@ export async function requestImageFromPrompt({
   refs?: { mimeType: string; imageBase64: string }[];
   timeoutMs?: number;
 }): Promise<{ bytes: Buffer; mimeType: string }> {
-  const openai = new OpenAI({
-    apiKey,
-    baseURL: "https://openrouter.ai/api/v1",
-    timeout: timeoutMs,
-  });
+  const client = createClient(apiKey);
 
-  const content: any[] = [{ type: "text", text: prompt }];
+  const content: ChatMessageContentItem[] = [{ type: "text", text: prompt }];
   if (refs && refs.length > 0) {
     for (const ref of refs) {
       content.push({
         type: "image_url",
-        image_url: { url: `data:${ref.mimeType};base64,${ref.imageBase64}` },
+        imageUrl: { url: `data:${ref.mimeType};base64,${ref.imageBase64}` },
       });
     }
   }
 
   try {
-    const response = await openai.chat.completions.create({
-      model,
-      modalities: ["image", "text"],
-      messages: [
-        {
-          role: "user",
-          content,
-        },
-      ],
-    } as any);
+    const response = (await client.chat.send(
+      {
+        model,
+        modalities: ["image", "text"],
+        messages: [
+          {
+            role: "user",
+            content,
+          },
+        ],
+      },
+      { timeoutMs }
+    )) as ChatResponse;
 
-    const message: any = response.choices?.[0]?.message;
-    const imageUrl: string | undefined = message?.images?.[0]?.image_url?.url;
+    const message = response.choices?.[0]?.message;
+    const imageUrl: string | undefined = (message as any)?.images?.[0]?.imageUrl?.url;
     if (!imageUrl) {
       throw new NetworkError("No image data received from the model.");
     }
@@ -262,13 +296,11 @@ export async function requestImageFromPrompt({
       bytes: Buffer.from(base64, "base64"),
       mimeType: mime,
     };
-  } catch (error: any) {
-    if (error.status === 401) {
-      throw new AuthError("Invalid API key provided for OpenRouter.");
+  } catch (error) {
+    if (error instanceof AuthError || error instanceof NetworkError) {
+      throw error;
     }
-
-    const message = error.message || String(error);
-    throw new NetworkError(`OpenRouter API request failed: ${message}`);
+    wrapError(error);
   }
 }
 
@@ -276,32 +308,21 @@ async function fetchOpenRouterModels({
   timeoutMs,
 }: {
   timeoutMs?: number;
-}): Promise<OpenRouterModelSummary[]> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs ?? 30000);
+}): Promise<Model[]> {
+  // Create a client without auth since /models is public
+  const client = new OpenRouter({});
 
   try {
-    const response = await fetch("https://openrouter.ai/api/v1/models", {
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new NetworkError(`OpenRouter /models failed: ${response.status} ${response.statusText}`);
-    }
-
-    const json: any = await response.json();
-    const data = Array.isArray(json?.data) ? json.data : [];
-    return data as OpenRouterModelSummary[];
+    const response = await client.models.list({}, { timeoutMs: timeoutMs ?? 30000 });
+    return response.data ?? [];
   } catch (error: any) {
     if (error instanceof AuthError || error instanceof NetworkError) {
       throw error;
     }
-    if (error?.name === "AbortError") {
+    if (error?.name === "RequestTimeoutError") {
       throw new NetworkError("OpenRouter /models request timed out.");
     }
     throw new NetworkError(`OpenRouter /models request failed: ${error?.message || String(error)}`);
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
@@ -322,38 +343,37 @@ export async function requestImageEditWithPreservation({
   timeoutMs?: number;
   systemPrompt?: string;
 }): Promise<{ bytes: Buffer; mimeType: string }> {
-  const openai = new OpenAI({
-    apiKey,
-    baseURL: "https://openrouter.ai/api/v1",
-    timeout: timeoutMs,
-  });
+  const client = createClient(apiKey);
 
-  const effectiveSystemPrompt = systemPrompt ?? await loadAiPrompt("edit-system");
+  const effectiveSystemPrompt = systemPrompt ?? (await loadAiPrompt("edit-system"));
 
   try {
-    const response = await openai.chat.completions.create({
-      model,
-      modalities: ["image", "text"],
-      messages: [
-        {
-          role: "system",
-          content: effectiveSystemPrompt,
-        },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: instruction },
-            {
-              type: "image_url",
-              image_url: { url: `data:${mimeType};base64,${imageBase64}` },
-            },
-          ],
-        },
-      ],
-    } as any);
+    const response = (await client.chat.send(
+      {
+        model,
+        modalities: ["image", "text"],
+        messages: [
+          {
+            role: "system",
+            content: effectiveSystemPrompt,
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: instruction },
+              {
+                type: "image_url",
+                imageUrl: { url: `data:${mimeType};base64,${imageBase64}` },
+              },
+            ],
+          },
+        ],
+      },
+      { timeoutMs }
+    )) as ChatResponse;
 
-    const message: any = response.choices?.[0]?.message;
-    const imageUrl: string | undefined = message?.images?.[0]?.image_url?.url;
+    const message = response.choices?.[0]?.message;
+    const imageUrl: string | undefined = (message as any)?.images?.[0]?.imageUrl?.url;
     if (!imageUrl) {
       throw new NetworkError("No image data received from the model.");
     }
@@ -376,13 +396,11 @@ export async function requestImageEditWithPreservation({
       bytes: Buffer.from(base64, "base64"),
       mimeType: mime,
     };
-  } catch (error: any) {
-    if (error.status === 401) {
-      throw new AuthError("Invalid API key provided for OpenRouter.");
+  } catch (error) {
+    if (error instanceof AuthError || error instanceof NetworkError) {
+      throw error;
     }
-
-    const message = error.message || String(error);
-    throw new NetworkError(`OpenRouter API request failed: ${message}`);
+    wrapError(error);
   }
 }
 
@@ -406,68 +424,7 @@ export async function listImageGenModelDetails({
 }): Promise<OpenRouterModelDetails[]> {
   const models =
     process.env.EIKON_MOCK_OPENROUTER === "1"
-      ? [
-          {
-            id: "google/gemini-3-pro-image-preview",
-            name: "Gemini 3 Pro Image Preview",
-            context_length: 32768,
-            pricing: {
-              prompt: "0.000000",
-              completion: "0.000000",
-              image: "0.000000",
-              request: "0",
-            },
-            architecture: {
-              input_modalities: ["text", "image"],
-              output_modalities: ["image"],
-            },
-          },
-          {
-            id: "openai/gpt-5-image",
-            name: "GPT-5 Image",
-            context_length: 131072,
-            pricing: {
-              prompt: "0.000010",
-              completion: "0.000030",
-              image: "0.000000",
-              request: "0",
-            },
-            architecture: {
-              input_modalities: ["text"],
-              output_modalities: ["image"],
-            },
-          },
-          {
-            id: "openai/gpt-5-image-mini",
-            name: "GPT-5 Image Mini",
-            context_length: 131072,
-            pricing: {
-              prompt: "0.000003",
-              completion: "0.000010",
-              image: "0.000000",
-              request: "0",
-            },
-            architecture: {
-              input_modalities: ["text", "image"],
-              output_modalities: ["image"],
-            },
-          },
-          {
-            id: "stability/sdxl-edit",
-            name: "SDXL Edit",
-            context_length: 2048,
-            pricing: {
-              prompt: "0.000000",
-              completion: "0.000000",
-              image: "0.000600",
-              request: "0",
-            },
-            architecture: {
-              input_modalities: ["image"],
-              output_modalities: ["image"],
-            },
-          },
-        ]
+      ? getMockModels()
       : await fetchOpenRouterModels({ timeoutMs });
 
   return filterModelDetails(models, (model) => {
@@ -494,68 +451,7 @@ export async function listImageEditModelDetails({
 }): Promise<OpenRouterModelDetails[]> {
   const models =
     process.env.EIKON_MOCK_OPENROUTER === "1"
-      ? [
-          {
-            id: "google/gemini-3-pro-image-preview",
-            name: "Gemini 3 Pro Image Preview",
-            context_length: 32768,
-            pricing: {
-              prompt: "0.000000",
-              completion: "0.000000",
-              image: "0.000000",
-              request: "0",
-            },
-            architecture: {
-              input_modalities: ["text", "image"],
-              output_modalities: ["image"],
-            },
-          },
-          {
-            id: "openai/gpt-5-image",
-            name: "GPT-5 Image",
-            context_length: 131072,
-            pricing: {
-              prompt: "0.000010",
-              completion: "0.000030",
-              image: "0.000000",
-              request: "0",
-            },
-            architecture: {
-              input_modalities: ["text"],
-              output_modalities: ["image"],
-            },
-          },
-          {
-            id: "openai/gpt-5-image-mini",
-            name: "GPT-5 Image Mini",
-            context_length: 131072,
-            pricing: {
-              prompt: "0.000003",
-              completion: "0.000010",
-              image: "0.000000",
-              request: "0",
-            },
-            architecture: {
-              input_modalities: ["text", "image"],
-              output_modalities: ["image"],
-            },
-          },
-          {
-            id: "stability/sdxl-edit",
-            name: "SDXL Edit",
-            context_length: 2048,
-            pricing: {
-              prompt: "0.000000",
-              completion: "0.000000",
-              image: "0.000600",
-              request: "0",
-            },
-            architecture: {
-              input_modalities: ["image"],
-              output_modalities: ["image"],
-            },
-          },
-        ]
+      ? getMockModels()
       : await fetchOpenRouterModels({ timeoutMs });
 
   return filterModelDetails(models, (model) => {
@@ -565,17 +461,110 @@ export async function listImageEditModelDetails({
   });
 }
 
-function toModelDetails(model: OpenRouterModelSummary): OpenRouterModelDetails | null {
+function getMockModels(): Model[] {
+  return [
+    {
+      id: "google/gemini-3-pro-image-preview",
+      name: "Gemini 3 Pro Image Preview",
+      canonicalSlug: "google/gemini-3-pro-image-preview",
+      contextLength: 32768,
+      created: 0,
+      pricing: {
+        prompt: "0.000000",
+        completion: "0.000000",
+        image: "0.000000",
+        request: "0",
+      },
+      architecture: {
+        modality: "multimodal",
+        inputModalities: ["text", "image"],
+        outputModalities: ["image"],
+      },
+      topProvider: { maxCompletionTokens: null, isModerated: false },
+      perRequestLimits: null,
+      supportedParameters: [],
+      defaultParameters: null,
+    },
+    {
+      id: "openai/gpt-5-image",
+      name: "GPT-5 Image",
+      canonicalSlug: "openai/gpt-5-image",
+      contextLength: 131072,
+      created: 0,
+      pricing: {
+        prompt: "0.000010",
+        completion: "0.000030",
+        image: "0.000000",
+        request: "0",
+      },
+      architecture: {
+        modality: "multimodal",
+        inputModalities: ["text"],
+        outputModalities: ["image"],
+      },
+      topProvider: { maxCompletionTokens: null, isModerated: false },
+      perRequestLimits: null,
+      supportedParameters: [],
+      defaultParameters: null,
+    },
+    {
+      id: "openai/gpt-5-image-mini",
+      name: "GPT-5 Image Mini",
+      canonicalSlug: "openai/gpt-5-image-mini",
+      contextLength: 131072,
+      created: 0,
+      pricing: {
+        prompt: "0.000003",
+        completion: "0.000010",
+        image: "0.000000",
+        request: "0",
+      },
+      architecture: {
+        modality: "multimodal",
+        inputModalities: ["text", "image"],
+        outputModalities: ["image"],
+      },
+      topProvider: { maxCompletionTokens: null, isModerated: false },
+      perRequestLimits: null,
+      supportedParameters: [],
+      defaultParameters: null,
+    },
+    {
+      id: "stability/sdxl-edit",
+      name: "SDXL Edit",
+      canonicalSlug: "stability/sdxl-edit",
+      contextLength: 2048,
+      created: 0,
+      pricing: {
+        prompt: "0.000000",
+        completion: "0.000000",
+        image: "0.000600",
+        request: "0",
+      },
+      architecture: {
+        modality: "image",
+        inputModalities: ["image"],
+        outputModalities: ["image"],
+      },
+      topProvider: { maxCompletionTokens: null, isModerated: false },
+      perRequestLimits: null,
+      supportedParameters: [],
+      defaultParameters: null,
+    },
+  ];
+}
+
+function toModelDetails(model: Model): OpenRouterModelDetails | null {
   const id = typeof model?.id === "string" ? model.id.trim() : "";
   if (!id) return null;
-  const input = model?.architecture?.input_modalities;
-  const output = model?.architecture?.output_modalities;
+  const input = model?.architecture?.inputModalities;
+  const output = model?.architecture?.outputModalities;
   if (!Array.isArray(input) || !Array.isArray(output)) return null;
 
   return {
     id,
     name: typeof model?.name === "string" ? model.name : undefined,
-    contextLength: typeof model?.context_length === "number" ? model.context_length : undefined,
+    contextLength: typeof model?.contextLength === "number" ? model.contextLength : undefined,
     inputModalities: input,
     outputModalities: output,
     pricing: model?.pricing
@@ -590,7 +579,7 @@ function toModelDetails(model: OpenRouterModelSummary): OpenRouterModelDetails |
 }
 
 function filterModelDetails(
-  models: OpenRouterModelSummary[],
+  models: Model[],
   predicate: (model: OpenRouterModelDetails) => boolean
 ): OpenRouterModelDetails[] {
   const entries = new Map<string, OpenRouterModelDetails>();
