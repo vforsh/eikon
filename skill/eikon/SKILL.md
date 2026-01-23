@@ -76,6 +76,8 @@ eikon upscale:local ./image.png --out ./image@2x.png --height 2400
 
 ### Generate images
 
+See [Gemini Image Prompt Guide](./GEMINI_IMAGE_PROMPT_GUIDE.md) for detailed prompting best practices.
+
 ```bash
 eikon generate --prompt "Minimal icon of a cat" --out ./cat.png
 eikon generate --prompt "Same style, new pose" --ref /abs/path/ref.png --out ./out.png
