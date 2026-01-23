@@ -9,6 +9,7 @@ import { upscaleLocalCommand } from "./commands/upscale_local";
 import { generateCommand } from "./commands/generate";
 import { generateModelsCommand } from "./commands/generate_models";
 import { placeholderCommand } from "./commands/placeholder";
+import { composeCommand } from "./commands/compose";
 import { editCommand } from "./commands/edit";
 import { editModelsCommand } from "./commands/edit_models";
 import { openrouterGuardrailsCommand, openrouterKeysCommand } from "./commands/openrouter";
@@ -33,6 +34,7 @@ export async function createProgram() {
    eikon generate --prompt "Minimal icon of a cat" --out ./cat.png
    eikon edit photo.png --prompt "Remove background" --out photo-nobg.png
    eikon placeholder --w 1200 --h 630 --bg-color "#111827" --out placeholder.png
+   eikon compose --layer base.png --layer overlay.png:0.5:multiply --out result.png
    eikon presets list --plain
    eikon config init
   eikon openrouter keys --api-key "$OPENROUTER_PROVISIONING_KEY"
@@ -182,6 +184,7 @@ export async function createProgram() {
     .option("--font-weight <weight>", "Font weight: normal, bold, or 100-900")
     .option("--font-size <px>", "Starting font size before auto-shrink")
     .option("--padding <px>", "Inner padding for text fitting (default: 24)")
+    .option("--mask <shape>", 'Shape mask: "circle", "rounded[:<radius>]", "squircle[:<radius>]"')
     .option("--force", "Overwrite if --out exists")
     .option("--json", "Output JSON")
     .option("--plain", "Stable plain-text output")
@@ -196,6 +199,31 @@ export async function createProgram() {
 `)
     .action(async (options) => {
       await placeholderCommand(options);
+    });
+
+  program
+    .command("compose")
+    .description("Compose multiple images with configurable opacity and blend modes")
+    .option("--layer <spec>", "Layer: <path>[:<opacity>][:<blend>] (repeatable, first is base)", (value: string, prev: string[]) => prev.concat(value), [] as string[])
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--width <px>", "Override output width")
+    .option("--height <px>", "Override output height")
+    .option("--bg-color <hex>", "Background color for transparent areas")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+  Examples:
+    eikon compose --layer base.png --layer overlay.png --out result.png
+    eikon compose --layer bg.png --layer fg.png:0.7 --out result.png
+    eikon compose --layer a.png --layer b.png::multiply --out out.png
+    eikon compose --layer a.png --layer b.png:0.5:screen --layer c.png:0.7 --out out.png
+    eikon compose --layer transparent.png --layer top.png --bg-color "#fff" --out result.jpg
+`)
+    .action(async (options) => {
+      await composeCommand(options);
     });
 
   const edit = program
