@@ -126,6 +126,8 @@ test("eikon placeholder --json returns structured output", async () => {
   expect(parsed.width).toBe(512);
   expect(parsed.height).toBe(512);
   expect(parsed.bgcolor).toBe("#000");
+  expect(parsed.background.type).toBe("solid");
+  expect(parsed.textEffects).toBeDefined();
   expect(parsed.text).toBe("Hello World");
   expect(parsed.textColor).toBeDefined();
   expect(parsed.font).toBeDefined();
@@ -252,6 +254,21 @@ test("eikon placeholder fails without required options", async () => {
   ]);
   expect(code2).toBe(2);
   expect(stderr2).toContain("Missing required option: --height");
+});
+
+test("eikon placeholder fails without background option", async () => {
+  const outPath = join(tmpdir(), `eikon-placeholder-missing-bg-${Date.now()}.png`);
+  const { code, stderr } = await runEikon([
+    "placeholder",
+    "--w",
+    "100",
+    "--h",
+    "100",
+    "--out",
+    outPath,
+  ]);
+  expect(code).toBe(2);
+  expect(stderr).toContain("Provide one of --bg-color");
 });
 
 test("eikon placeholder fails with invalid color", async () => {
@@ -452,4 +469,96 @@ test("eikon placeholder rejects conflicting dimension aliases", async () => {
 
   expect(code).toBe(2);
   expect(stderr).toContain("Conflicting values");
+});
+
+test("eikon placeholder rejects multiple background options", async () => {
+  const outPath = join(tmpdir(), `eikon-placeholder-bg-conflict-${Date.now()}.png`);
+  const { code, stderr } = await runEikon([
+    "placeholder",
+    "--w",
+    "100",
+    "--h",
+    "100",
+    "--bg-color",
+    "#000",
+    "--bg-linear",
+    "#111827,#0ea5e9,135",
+    "--out",
+    outPath,
+  ]);
+  expect(code).toBe(2);
+  expect(stderr).toContain("Choose only one of --bg-color");
+});
+
+test("eikon placeholder supports linear gradient backgrounds", async () => {
+  const outPath = join(tmpdir(), `eikon-placeholder-linear-${Date.now()}.png`);
+  const { code, stdout, stderr } = await runEikon([
+    "placeholder",
+    "--w",
+    "320",
+    "--h",
+    "200",
+    "--bg-linear",
+    "#111827,#0ea5e9,135",
+    "--out",
+    outPath,
+    "--json",
+  ]);
+
+  expect(stderr.trim()).toBe("");
+  expect(code).toBe(0);
+  const parsed = JSON.parse(stdout);
+  expect(parsed.background.type).toBe("linear");
+  expect(parsed.background.colors).toEqual(["#111827", "#0ea5e9"]);
+  expect(parsed.background.angleDeg).toBe(135);
+
+  const buffer = Buffer.from(await Bun.file(outPath).arrayBuffer());
+  const info = await getImageInfoFromBuffer(buffer);
+  expect(info.width).toBe(320);
+  expect(info.height).toBe(200);
+});
+
+test("eikon placeholder supports radial gradient backgrounds", async () => {
+  const outPath = join(tmpdir(), `eikon-placeholder-radial-${Date.now()}.png`);
+  const { code, stdout } = await runEikon([
+    "placeholder",
+    "--w",
+    "240",
+    "--h",
+    "160",
+    "--bg-radial",
+    "#111827,#000,50%,40%,85%",
+    "--out",
+    outPath,
+    "--json",
+  ]);
+
+  expect(code).toBe(0);
+  const parsed = JSON.parse(stdout);
+  expect(parsed.background.type).toBe("radial");
+  expect(parsed.background.cx).toBe("50%");
+  expect(parsed.background.cy).toBe("40%");
+  expect(parsed.background.r).toBe("85%");
+});
+
+test("eikon placeholder applies radial defaults", async () => {
+  const outPath = join(tmpdir(), `eikon-placeholder-radial-defaults-${Date.now()}.png`);
+  const { code, stdout } = await runEikon([
+    "placeholder",
+    "--w",
+    "240",
+    "--h",
+    "160",
+    "--bg-radial",
+    "#111827,#000",
+    "--out",
+    outPath,
+    "--json",
+  ]);
+
+  expect(code).toBe(0);
+  const parsed = JSON.parse(stdout);
+  expect(parsed.background.cx).toBe("50%");
+  expect(parsed.background.cy).toBe("50%");
+  expect(parsed.background.r).toBe("75%");
 });

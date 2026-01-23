@@ -158,15 +158,26 @@ export async function createProgram() {
 
   program
     .command("placeholder")
-    .description("Generate a placeholder image with solid background and text")
+    .description("Generate a placeholder image with background and text")
     .requiredOption("--out <file>", "Output path (extension determines format)")
     .option("--width <px>", "Image width in pixels")
     .option("--w <px>", "Image width in pixels (alias)")
     .option("--height <px>", "Image height in pixels")
     .option("--h <px>", "Image height in pixels (alias)")
-    .requiredOption("--bg-color <color>", "Background color (hex)")
+    .option("--bg-color <color>", "Solid background color (hex)")
+    .option("--bg-linear <spec>", 'Linear gradient "<hex1>,<hex2>,<angleDeg>"')
+    .option("--bg-radial <spec>", 'Radial gradient "<innerHex>,<outerHex>[,<cx>,<cy>,<r>]"')
     .option("--text <string>", "Text to display (default: WxH, supports \\n for multiline)")
     .option("--text-color <color>", "Text color (hex, default: auto contrast)")
+    .option("--no-text-outline", "Disable text outline")
+    .option("--text-outline-color <color>", "Text outline color (hex)")
+    .option("--text-outline-width <px>", "Text outline width in pixels")
+    .option("--no-text-shadow", "Disable text shadow")
+    .option("--text-shadow-color <color>", "Text shadow color (hex)")
+    .option("--text-shadow-dx <px>", "Text shadow X offset (default: 0)")
+    .option("--text-shadow-dy <px>", "Text shadow Y offset (default: 2)")
+    .option("--text-shadow-blur <px>", "Text shadow blur (default: font-based)")
+    .option("--text-shadow-opacity <0..1>", "Text shadow opacity (default: 0.35)")
     .option("--font-family <name>", "Font family (default: sans-serif)")
     .option("--font-weight <weight>", "Font weight: normal, bold, or 100-900")
     .option("--font-size <px>", "Starting font size before auto-shrink")
@@ -179,8 +190,9 @@ export async function createProgram() {
     .addHelpText("before", `
   Examples:
     eikon placeholder --w 1200 --h 630 --bg-color "#0B1220" --text "Hello" --out out.png
-    eikon placeholder --width 512 --height 512 --bg-color "#eee" --out ./512.png
-    eikon placeholder --w 800 --h 400 --bg-color "#111827" --text "Line 1\\nLine 2" --text-color "#F9FAFB" --out out.webp
+    eikon placeholder --width 512 --height 512 --bg-linear "#111827,#0ea5e9,135" --out ./512.png
+    eikon placeholder --w 1200 --h 630 --bg-radial "#111827,#000,50%,40%,85%" --out out.webp
+    eikon placeholder --w 800 --h 400 --bg-color "#111827" --text "Line 1\\nLine 2" --no-text-shadow --out out.png
 `)
     .action(async (options) => {
       await placeholderCommand(options);
