@@ -13,6 +13,10 @@ import { composeCommand } from "./commands/compose";
 import { editCommand } from "./commands/edit";
 import { editModelsCommand } from "./commands/edit_models";
 import { openrouterGuardrailsCommand, openrouterKeysCommand } from "./commands/openrouter";
+import { aiRemoveBgCommand } from "./commands/ai_remove_bg";
+import { aiExtendCommand } from "./commands/ai_extend";
+import { aiVariationsCommand } from "./commands/ai_variations";
+import { aiDescribeCommand } from "./commands/ai_describe";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -419,6 +423,99 @@ Examples:
 `)
     .action(async (options) => {
       await openrouterGuardrailsCommand(options);
+    });
+
+  const ai = program.command("ai").description("AI-powered image operations");
+
+  ai.command("remove-bg <image>")
+    .description("Remove background from an image (outputs transparent PNG)")
+    .requiredOption("--out <file>", "Output path (.png required for transparency)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error diagnostics")
+    .option("--no-color", "Disable color")
+    .option("-m, --model <id>", "OpenRouter model ID")
+    .option("--api-key-file <path>", "Read API key from file")
+    .option("--api-key-stdin", "Read API key from stdin")
+    .option("--timeout <ms>", "Request timeout in ms")
+    .addHelpText("before", `
+Examples:
+  eikon ai remove-bg photo.png --out photo-nobg.png
+  eikon ai remove-bg sprite.png --out sprite-nobg.png --json
+`)
+    .action(async (image, options) => {
+      await aiRemoveBgCommand(image, options);
+    });
+
+  ai.command("extend <image>")
+    .description("Extend an image in specified direction(s)")
+    .requiredOption("--out <file>", "Output path for the extended image")
+    .option("--direction <dir>", "Direction: up, down, left, right, all (default: all)")
+    .option("--pixels <n>", "Pixels to extend (default: 256)")
+    .option("--prompt <text>", "Optional description for the extended area")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error diagnostics")
+    .option("--no-color", "Disable color")
+    .option("-m, --model <id>", "OpenRouter model ID")
+    .option("--api-key-file <path>", "Read API key from file")
+    .option("--api-key-stdin", "Read API key from stdin")
+    .option("--timeout <ms>", "Request timeout in ms")
+    .addHelpText("before", `
+Examples:
+  eikon ai extend landscape.jpg --out wider.jpg --direction right --pixels 512
+  eikon ai extend scene.png --out scene-ext.png --direction all --prompt "continue the forest"
+`)
+    .action(async (image, options) => {
+      await aiExtendCommand(image, options);
+    });
+
+  ai.command("variations <image>")
+    .description("Generate variations of an image")
+    .requiredOption("--out <file>", "Output path (will be numbered: name_1.ext, name_2.ext, ...)")
+    .option("-n, --count <n>", "Number of variations (default: 4, max: 10)")
+    .option("--prompt <text>", "Optional style guidance")
+    .option("--force", "Overwrite if outputs exist")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error diagnostics")
+    .option("--no-color", "Disable color")
+    .option("-m, --model <id>", "OpenRouter model ID")
+    .option("--api-key-file <path>", "Read API key from file")
+    .option("--api-key-stdin", "Read API key from stdin")
+    .option("--timeout <ms>", "Request timeout in ms")
+    .addHelpText("before", `
+Examples:
+  eikon ai variations logo.png --out logo-var.png -n 4
+  eikon ai variations photo.jpg --out photo-var.jpg --prompt "different lighting"
+`)
+    .action(async (image, options) => {
+      await aiVariationsCommand(image, options);
+    });
+
+  ai.command("describe <image>")
+    .description("Describe an image using AI")
+    .option("--detail <level>", "Detail level: brief, standard, detailed (default: standard)")
+    .option("--focus <area>", "Focus area: composition, colors, objects, text, all (default: all)")
+    .option("-o, --output <file>", "Write description to file")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error diagnostics")
+    .option("--no-color", "Disable color")
+    .option("-m, --model <id>", "OpenRouter model ID")
+    .option("--api-key-file <path>", "Read API key from file")
+    .option("--api-key-stdin", "Read API key from stdin")
+    .option("--timeout <ms>", "Request timeout in ms")
+    .addHelpText("before", `
+Examples:
+  eikon ai describe screenshot.png
+  eikon ai describe ui.png --detail detailed --focus composition
+  eikon ai describe photo.png -o description.txt --json
+`)
+    .action(async (image, options) => {
+      await aiDescribeCommand(image, options);
     });
 
   // Help command as first-class command

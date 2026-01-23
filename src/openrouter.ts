@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { AuthError, NetworkError } from "./errors";
+import { loadAiPrompt } from "./ai-prompts";
 
 export interface OpenRouterModelSummary {
   id: string;
@@ -304,15 +305,6 @@ async function fetchOpenRouterModels({
   }
 }
 
-const EDIT_SYSTEM_PROMPT = `You are an image editing assistant. Your task is to modify the provided image according to the user's instruction while preserving as much of the original image as possible.
-
-Guidelines:
-- Only make the specific changes requested
-- Preserve the original style, lighting, colors, and composition unless explicitly asked to change them
-- Keep unchanged areas identical to the original
-- Maintain the same resolution and aspect ratio
-- If the instruction is unclear, make minimal changes`;
-
 export async function requestImageEditWithPreservation({
   apiKey,
   model,
@@ -320,6 +312,7 @@ export async function requestImageEditWithPreservation({
   mimeType,
   imageBase64,
   timeoutMs,
+  systemPrompt,
 }: {
   apiKey: string;
   model: string;
@@ -327,12 +320,15 @@ export async function requestImageEditWithPreservation({
   mimeType: string;
   imageBase64: string;
   timeoutMs?: number;
+  systemPrompt?: string;
 }): Promise<{ bytes: Buffer; mimeType: string }> {
   const openai = new OpenAI({
     apiKey,
     baseURL: "https://openrouter.ai/api/v1",
     timeout: timeoutMs,
   });
+
+  const effectiveSystemPrompt = systemPrompt ?? await loadAiPrompt("edit-system");
 
   try {
     const response = await openai.chat.completions.create({
@@ -341,7 +337,7 @@ export async function requestImageEditWithPreservation({
       messages: [
         {
           role: "system",
-          content: EDIT_SYSTEM_PROMPT,
+          content: effectiveSystemPrompt,
         },
         {
           role: "user",
