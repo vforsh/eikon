@@ -17,6 +17,7 @@ import { aiRemoveBgCommand } from "./commands/ai_remove_bg";
 import { aiExtendCommand } from "./commands/ai_extend";
 import { aiVariationsCommand } from "./commands/ai_variations";
 import { aiDescribeCommand } from "./commands/ai_describe";
+import { atlasSplitCommand } from "./commands/atlas_split";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -516,6 +517,31 @@ Examples:
 `)
     .action(async (image, options) => {
       await aiDescribeCommand(image, options);
+    });
+
+  const atlas = program.command("atlas").description("Sprite atlas operations");
+
+  atlas
+    .command("split <image>")
+    .description("Split a sprite atlas into individual sprite images")
+    .requiredOption("--out <dir>", "Output directory for extracted sprites")
+    .option("--json <file>", "TexturePacker JSON file for sprite regions")
+    .option("--auto", "Auto-detect sprites by transparency (default if no --json)")
+    .option("--metadata", "Generate sprites.json metadata file")
+    .option("--force", "Overwrite existing files")
+    .option("--json-output", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon atlas split spritesheet.png --out ./sprites/
+  eikon atlas split spritesheet.png --json sprites.json --out ./sprites/
+  eikon atlas split spritesheet.png --out ./sprites/ --metadata
+  eikon atlas split spritesheet.png --auto --out ./sprites/ --force
+`)
+    .action(async (image, options) => {
+      await atlasSplitCommand(image, options);
     });
 
   // Help command as first-class command
