@@ -18,6 +18,7 @@ import { aiExtendCommand } from "./commands/ai_extend";
 import { aiVariationsCommand } from "./commands/ai_variations";
 import { aiDescribeCommand } from "./commands/ai_describe";
 import { atlasSplitCommand } from "./commands/atlas_split";
+import { atlasExtractCommand } from "./commands/atlas_extract";
 import { transformRotateCommand } from "./commands/transform_rotate";
 import { transformFlipCommand } from "./commands/transform_flip";
 import { transformCropCommand } from "./commands/transform_crop";
@@ -546,6 +547,27 @@ Examples:
 `)
     .action(async (image, options) => {
       await atlasSplitCommand(image, options);
+    });
+
+  atlas
+    .command("extract <image> <frames...>")
+    .description("Extract specific frames from a sprite atlas (requires JSON data)")
+    .requiredOption("--json <file>", "TexturePacker JSON file for sprite regions")
+    .requiredOption("--out <dir>", "Output directory for extracted frames")
+    .option("--force", "Overwrite existing files")
+    .option("--json-output", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon atlas extract spritesheet.png player_idle --json sprites.json --out ./frames/
+  eikon atlas extract spritesheet.png player_idle player_run --json sprites.json --out ./frames/
+  eikon atlas extract spritesheet.png "player_*" --json sprites.json --out ./frames/
+  eikon atlas extract spritesheet.png "enemy_?_idle" "player_*" --json sprites.json --out ./frames/
+`)
+    .action(async (image, frames, options) => {
+      await atlasExtractCommand(image, frames, options);
     });
 
   const transform = program.command("transform").description("Image transformation operations");
