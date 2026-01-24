@@ -24,6 +24,7 @@ import { transformRotateCommand } from "./commands/transform_rotate";
 import { transformFlipCommand } from "./commands/transform_flip";
 import { transformCropCommand } from "./commands/transform_crop";
 import { transformPadCommand } from "./commands/transform_pad";
+import { transformTrimCommand } from "./commands/transform_trim";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -689,6 +690,32 @@ Examples:
 `)
     .action(async (image, options) => {
       await transformPadCommand(image, options);
+    });
+
+  transform
+    .command("trim <image>")
+    .description("Trim transparent pixels from image edges")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--threshold <n>", "Alpha threshold 0-255 (pixels with alpha <= threshold are trimmed, default: 0)")
+    .option("--top", "Trim top edge only")
+    .option("--right", "Trim right edge only")
+    .option("--bottom", "Trim bottom edge only")
+    .option("--left", "Trim left edge only")
+    .option("--padding <px>", "Keep N pixels of border after trimming")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon transform trim image.png --out trimmed.png
+  eikon transform trim image.png --threshold 10 --out trimmed.png
+  eikon transform trim image.png --top --bottom --out trimmed.png
+  eikon transform trim image.png --padding 5 --out trimmed.png
+`)
+    .action(async (image, options) => {
+      await transformTrimCommand(image, options);
     });
 
   // Help command as first-class command
