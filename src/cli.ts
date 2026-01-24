@@ -215,11 +215,11 @@ export async function createProgram() {
 
   program
     .command("compose")
-    .description("Compose multiple images with configurable opacity and blend modes")
-    .option("--layer <spec>", "Layer: <path>[:<opacity>][:<blend>] (repeatable, first is base)", (value: string, prev: string[]) => prev.concat(value), [] as string[])
+    .description("Layer images in order (first = bottom, last = top) with opacity and blend modes")
+    .option("--layer <spec>", "Layer: <path>[@<x>,<y>][:<opacity>][:<blend>] (repeatable)", (value: string, prev: string[]) => prev.concat(value), [] as string[])
     .requiredOption("--out <file>", "Output path (extension determines format)")
-    .option("--width <px>", "Override output width")
-    .option("--height <px>", "Override output height")
+    .option("--width <px>", "Canvas width (default: first layer's width)")
+    .option("--height <px>", "Canvas height (default: first layer's height)")
     .option("--bg-color <hex>", "Background color for transparent areas")
     .option("--force", "Overwrite if --out exists")
     .option("--json", "Output JSON")
@@ -227,12 +227,18 @@ export async function createProgram() {
     .option("--quiet", "Suppress non-error output")
     .option("--no-color", "Disable color")
     .addHelpText("before", `
+  Layers are composited in order: first layer is bottom, last is top.
+  Canvas size defaults to first layer's dimensions, override with --width/--height.
+  Offsets are relative to center (positive x = right, positive y = down).
+
   Examples:
     eikon compose --layer base.png --layer overlay.png --out result.png
     eikon compose --layer bg.png --layer fg.png:0.7 --out result.png
     eikon compose --layer a.png --layer b.png::multiply --out out.png
     eikon compose --layer a.png --layer b.png:0.5:screen --layer c.png:0.7 --out out.png
-    eikon compose --layer transparent.png --layer top.png --bg-color "#fff" --out result.jpg
+    eikon compose --layer base.png --layer icon.png@50,30 --out result.png
+    eikon compose --layer base.png --layer icon.png@-20,-20:0.8 --out result.png
+    eikon compose --width 200 --height 200 --layer bg.png --layer fg.png@0,50 --out result.png
 `)
     .action(async (options) => {
       await composeCommand(options);

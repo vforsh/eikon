@@ -21,12 +21,16 @@ interface ParsedLayer {
   path: string;
   opacity: number;
   blend: string;
+  offsetX: number;
+  offsetY: number;
 }
 
 interface LayerInfo {
   path: string;
   opacity: number;
   blend: string;
+  offsetX: number;
+  offsetY: number;
   width: number;
   height: number;
 }
@@ -57,14 +61,32 @@ const VALID_BLEND_MODES = [
 type BlendMode = (typeof VALID_BLEND_MODES)[number];
 
 /**
- * Parse layer specification: <path>[:<opacity>][:<blend>]
+ * Parse layer specification: <path>[@<x>,<y>][:<opacity>][:<blend>]
  * Examples:
  *   image.png
  *   image.png:0.5
  *   image.png::multiply
  *   image.png:0.5:multiply
+ *   image.png@50,30
+ *   image.png@-20,-20:0.8
+ *   image.png@0,0::multiply
+ *   image.png@100,50:0.5:screen
  */
 function parseLayerSpec(spec: string): ParsedLayer {
+  // Extract @x,y offset if present (before parsing colons)
+  let offsetX = 0;
+  let offsetY = 0;
+  let specWithoutOffset = spec;
+
+  const offsetMatch = spec.match(/@(-?\d+),(-?\d+)/);
+  if (offsetMatch && offsetMatch.index !== undefined) {
+    offsetX = parseInt(offsetMatch[1]!, 10);
+    offsetY = parseInt(offsetMatch[2]!, 10);
+    specWithoutOffset =
+      spec.slice(0, offsetMatch.index) +
+      spec.slice(offsetMatch.index + offsetMatch[0].length);
+  }
+
   // Split on colons, but we need to handle Windows paths (C:\...)
   // Strategy: find first colon that could start opacity/blend section
   // A colon followed by a digit or another colon is likely opacity/blend
@@ -78,9 +100,9 @@ function parseLayerSpec(spec: string): ParsedLayer {
   let match: RegExpExecArray | null = null;
   let firstSplitIndex = -1;
 
-  while ((match = colonRegex.exec(spec)) !== null) {
+  while ((match = colonRegex.exec(specWithoutOffset)) !== null) {
     // Check if this looks like the start of opacity/blend section
-    const afterColon = spec.slice(match.index + 1);
+    const afterColon = specWithoutOffset.slice(match.index + 1);
     // If it's a digit/dot or another colon, this is likely our split point
     if (/^[\d.:]/.test(afterColon)) {
       firstSplitIndex = match.index;
@@ -90,10 +112,10 @@ function parseLayerSpec(spec: string): ParsedLayer {
 
   if (firstSplitIndex === -1) {
     // No opacity/blend section
-    path = spec;
+    path = specWithoutOffset;
   } else {
-    path = spec.slice(0, firstSplitIndex);
-    const rest = spec.slice(firstSplitIndex + 1);
+    path = specWithoutOffset.slice(0, firstSplitIndex);
+    const rest = specWithoutOffset.slice(firstSplitIndex + 1);
     const parts = rest.split(":");
 
     if (parts.length >= 1 && parts[0] !== "") {
@@ -132,7 +154,7 @@ function parseLayerSpec(spec: string): ParsedLayer {
     blend = normalizedBlend;
   }
 
-  return { path: resolve(path), opacity, blend };
+  return { path: resolve(path), opacity, blend, offsetX, offsetY };
 }
 
 /**
@@ -420,13 +442,13 @@ export async function composeCommand(opts: ComposeOptions) {
     const preparedWidth = preparedMeta.width || outputWidth;
     const preparedHeight = preparedMeta.height || outputHeight;
 
-    // Calculate center position
+    // Calculate center position and apply offset
     const pos = centerPosition(preparedWidth, preparedHeight, outputWidth, outputHeight);
 
     compositeOps.push({
       input: preparedBuffer,
-      left: pos.left,
-      top: pos.top,
+      left: pos.left + layer.offsetX,
+      top: pos.top + layer.offsetY,
       blend: layer.blend,
     });
   }
@@ -468,6 +490,8 @@ export async function composeCommand(opts: ComposeOptions) {
       path: l.path,
       opacity: l.opacity,
       blend: l.blend,
+      offsetX: l.offsetX,
+      offsetY: l.offsetY,
       originalWidth: l.width,
       originalHeight: l.height,
     })),

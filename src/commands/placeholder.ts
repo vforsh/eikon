@@ -406,11 +406,12 @@ function parseBgLinearSpec(spec: string): BgLinearSpec {
       'Expected format: "<hex1>,<hex2>,<angleDeg>"',
     ]);
   }
-  parseHexColor(parts[0]);
-  parseHexColor(parts[1]);
-  const angle = parseNumber(parts[2], "angle");
+  const [color1, color2, angleStr] = parts as [string, string, string];
+  parseHexColor(color1);
+  parseHexColor(color2);
+  const angle = parseNumber(angleStr, "angle");
   return {
-    colors: [parts[0], parts[1]],
+    colors: [color1, color2],
     angleDeg: normalizeAngle(angle),
   };
 }
@@ -427,7 +428,7 @@ function parseBgRadialSpec(
     ]);
   }
 
-  const [inner, outer, cxRaw = "50%", cyRaw = "50%", rRaw = "75%"] = parts;
+  const [inner, outer, cxRaw = "50%", cyRaw = "50%", rRaw = "75%"] = parts as [string, string, ...string[]];
   parseHexColor(inner);
   parseHexColor(outer);
 
@@ -951,11 +952,14 @@ export async function placeholderCommand(opts: PlaceholderOptions) {
     outputBytes = await pipeline.webp({ lossless: true }).toBuffer();
   } else if (mime === "image/jpeg") {
     // JPEG doesn't support alpha, flatten with background
-    const flattenColor = background.type === "solid" && solidBackground
-      ? solidBackground
-      : background.type === "linear"
-      ? sampleLinearGradient(background.spec, { x: 0.5, y: 0.5 })
-      : sampleRadialGradient(background.spec, { x: 0.5, y: 0.5 }, width, height);
+    let flattenColor: ParsedColor;
+    if (background.type === "solid" && solidBackground) {
+      flattenColor = solidBackground;
+    } else if (background.type === "linear") {
+      flattenColor = sampleLinearGradient(background.spec, { x: 0.5, y: 0.5 });
+    } else {
+      flattenColor = sampleRadialGradient((background as { type: "radial"; spec: BgRadialSpec }).spec, { x: 0.5, y: 0.5 }, width, height);
+    }
     outputBytes = await pipeline
       .flatten({ background: { r: flattenColor.r, g: flattenColor.g, b: flattenColor.b } })
       .jpeg({ quality: 92, mozjpeg: true })
