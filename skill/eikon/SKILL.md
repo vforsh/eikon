@@ -114,6 +114,9 @@ eikon placeholder --out placeholder.png --width 800 --height 600 --bg-color "#cc
 # Custom text
 eikon placeholder --out banner.png -w 1200 -h 400 --bg-color "#3b82f6" --text "Hero Banner"
 
+# No text (empty string)
+eikon placeholder --out bg.png -w 512 -h 512 --bg-linear "#667eea,#764ba2,135" --text ""
+
 # Multi-line text (use \n)
 eikon placeholder --out card.png -w 400 -h 300 --bg-color "#1a1a1a" --text "Card Title\nSubtitle"
 
@@ -124,6 +127,24 @@ eikon placeholder --out custom.png -w 600 -h 400 --bg-color "#f0f0f0" \
 # Typography tweaks
 eikon placeholder --out branded.png -w 800 -h 200 --bg-color "#000" \
   --font-family "Inter" --font-weight 600 --text "Branded Text"
+```
+
+**Shape masks** (`--mask`): Clip output to circle, rounded rect, or squircle.
+
+```bash
+# Circle (inscribed, radius = min(w,h)/2)
+eikon placeholder -w 512 -h 512 --bg-color "#3b82f6" --mask circle --out avatar.png
+
+# Rounded rectangle (auto 10% radius)
+eikon placeholder -w 800 -h 400 --bg-color "#1a1a1a" --mask rounded --out card.png
+
+# Rounded with explicit radius (px or %)
+eikon placeholder -w 800 -h 400 --bg-color "#1a1a1a" --mask "rounded:32" --out card.png
+eikon placeholder -w 512 -h 512 --bg-color "#1a1a1a" --mask "rounded:15%" --out icon.png
+
+# Squircle (iOS-style superellipse, smoother than rounded)
+eikon placeholder -w 512 -h 512 --bg-linear "#667eea,#764ba2,135" --mask squircle --out app.png
+eikon placeholder -w 512 -h 512 --bg-linear "#667eea,#764ba2,135" --mask "squircle:22%" --out ios-icon.png
 ```
 
 ### Write output to file
