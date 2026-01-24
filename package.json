@@ -19,6 +19,7 @@
   "dependencies": {
     "@openrouter/sdk": "^0.4.0",
     "commander": "^14.0.2",
+    "maxrects-packer": "^2.7.3",
     "sharp": "^0.34.5"
   },
   "devDependencies": {

@@ -19,6 +19,7 @@ import { aiVariationsCommand } from "./commands/ai_variations";
 import { aiDescribeCommand } from "./commands/ai_describe";
 import { atlasSplitCommand } from "./commands/atlas_split";
 import { atlasExtractCommand } from "./commands/atlas_extract";
+import { atlasCreateCommand } from "./commands/atlas_create";
 import { transformRotateCommand } from "./commands/transform_rotate";
 import { transformFlipCommand } from "./commands/transform_flip";
 import { transformCropCommand } from "./commands/transform_crop";
@@ -568,6 +569,32 @@ Examples:
 `)
     .action(async (image, frames, options) => {
       await atlasExtractCommand(image, frames, options);
+    });
+
+  atlas
+    .command("create <inputs...>")
+    .alias("bundle")
+    .description("Create a sprite atlas from images or a folder")
+    .requiredOption("--out <file>", "Output atlas path (.png, .jpg, .webp)")
+    .option("--padding <px>", "Padding between sprites (default: 1)")
+    .option("--format <type>", 'JSON format: "hash" (default) or "array"')
+    .option("--no-json", "Skip JSON metadata generation")
+    .option("--force", "Overwrite existing files")
+    .option("--json-output", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon atlas create ./sprites/ --out atlas.png
+  eikon atlas create sprite1.png sprite2.png sprite3.png --out atlas.png
+  eikon atlas create ./sprites/ --out atlas.png --padding 2
+  eikon atlas create ./sprites/ --out atlas.png --format array
+  eikon atlas create ./sprites/ --out atlas.png --no-json
+  eikon atlas bundle ./sprites/ --out atlas.png
+`)
+    .action(async (inputs, options) => {
+      await atlasCreateCommand(inputs, options);
     });
 
   const transform = program.command("transform").description("Image transformation operations");
