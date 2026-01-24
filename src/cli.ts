@@ -18,6 +18,10 @@ import { aiExtendCommand } from "./commands/ai_extend";
 import { aiVariationsCommand } from "./commands/ai_variations";
 import { aiDescribeCommand } from "./commands/ai_describe";
 import { atlasSplitCommand } from "./commands/atlas_split";
+import { transformRotateCommand } from "./commands/transform_rotate";
+import { transformFlipCommand } from "./commands/transform_flip";
+import { transformCropCommand } from "./commands/transform_crop";
+import { transformPadCommand } from "./commands/transform_pad";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -542,6 +546,100 @@ Examples:
 `)
     .action(async (image, options) => {
       await atlasSplitCommand(image, options);
+    });
+
+  const transform = program.command("transform").description("Image transformation operations");
+
+  transform
+    .command("rotate <image>")
+    .description("Rotate an image by an arbitrary angle")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--angle <degrees>", "Rotation angle in degrees (default: 0)")
+    .option("--bg-color <hex>", "Background color for empty areas (default: transparent)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon transform rotate image.png --angle 45 --out rotated.png
+  eikon transform rotate image.png --angle 90 --out rotated.png
+  eikon transform rotate image.png --angle -30 --bg-color "#ffffff" --out rotated.jpg
+`)
+    .action(async (image, options) => {
+      await transformRotateCommand(image, options);
+    });
+
+  transform
+    .command("flip <image>")
+    .description("Flip an image horizontally and/or vertically")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--horizontal", "Flip horizontally (mirror)")
+    .option("--vertical", "Flip vertically")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon transform flip image.png --horizontal --out flipped.png
+  eikon transform flip image.png --vertical --out flipped.png
+  eikon transform flip image.png --horizontal --vertical --out flipped.png
+`)
+    .action(async (image, options) => {
+      await transformFlipCommand(image, options);
+    });
+
+  transform
+    .command("crop <image>")
+    .description("Crop an image by coordinates or percentage")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--left <value>", "Left offset (px or %)")
+    .option("--top <value>", "Top offset (px or %)")
+    .option("--width <value>", "Crop width (px or %)")
+    .option("--height <value>", "Crop height (px or %)")
+    .option("--right <value>", "Right edge (px or %, alternative to --width)")
+    .option("--bottom <value>", "Bottom edge (px or %, alternative to --height)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon transform crop image.png --left 10 --top 10 --width 100 --height 100 --out cropped.png
+  eikon transform crop image.png --left 10% --top 10% --width 80% --height 80% --out cropped.png
+  eikon transform crop image.png --left 50 --top 50 --right 200 --bottom 200 --out cropped.png
+`)
+    .action(async (image, options) => {
+      await transformCropCommand(image, options);
+    });
+
+  transform
+    .command("pad <image>")
+    .description("Add padding around an image")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--all <px>", "Padding for all sides")
+    .option("--top <px>", "Top padding (overrides --all)")
+    .option("--right <px>", "Right padding (overrides --all)")
+    .option("--bottom <px>", "Bottom padding (overrides --all)")
+    .option("--left <px>", "Left padding (overrides --all)")
+    .option("--bg-color <hex>", "Padding color (default: transparent)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon transform pad image.png --all 20 --out padded.png
+  eikon transform pad image.png --top 10 --bottom 10 --out padded.png
+  eikon transform pad image.png --all 20 --bg-color "#ffffff" --out padded.jpg
+`)
+    .action(async (image, options) => {
+      await transformPadCommand(image, options);
     });
 
   // Help command as first-class command
