@@ -183,10 +183,10 @@ export async function createProgram() {
     .option("--bg-radial <spec>", 'Radial gradient "<innerHex>,<outerHex>[,<cx>,<cy>,<r>]"')
     .option("--text <string>", "Text to display (default: WxH, supports \\n for multiline)")
     .option("--text-color <color>", "Text color (hex, default: auto contrast)")
-    .option("--no-text-outline", "Disable text outline")
+    .option("--text-outline", "Enable text outline")
     .option("--text-outline-color <color>", "Text outline color (hex)")
     .option("--text-outline-width <px>", "Text outline width in pixels")
-    .option("--no-text-shadow", "Disable text shadow")
+    .option("--text-shadow", "Enable text shadow")
     .option("--text-shadow-color <color>", "Text shadow color (hex)")
     .option("--text-shadow-dx <px>", "Text shadow X offset (default: 0)")
     .option("--text-shadow-dy <px>", "Text shadow Y offset (default: 2)")
@@ -207,7 +207,7 @@ export async function createProgram() {
     eikon placeholder --w 1200 --h 630 --bg-color "#0B1220" --text "Hello" --out out.png
     eikon placeholder --width 512 --height 512 --bg-linear "#111827,#0ea5e9,135" --out ./512.png
     eikon placeholder --w 1200 --h 630 --bg-radial "#111827,#000,50%,40%,85%" --out out.webp
-    eikon placeholder --w 800 --h 400 --bg-color "#111827" --text "Line 1\\nLine 2" --no-text-shadow --out out.png
+    eikon placeholder --w 800 --h 400 --bg-color "#111827" --text "Line 1\\nLine 2" --out out.png
 `)
     .action(async (options) => {
       await placeholderCommand(options);

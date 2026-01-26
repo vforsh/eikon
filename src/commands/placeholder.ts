@@ -820,8 +820,8 @@ export async function placeholderCommand(opts: PlaceholderOptions) {
     throw new UsageError(`Invalid font size: "${opts.fontSize}" (expected positive integer)`);
   }
 
-  const textOutlineEnabled = opts.textOutline !== false;
-  const textShadowEnabled = opts.textShadow !== false;
+  const textOutlineEnabled = opts.textOutline === true;
+  const textShadowEnabled = opts.textShadow === true;
   const defaultOutlineWidth = Math.max(1, Math.round(fontSize * 0.08));
   const defaultShadowBlur = Math.max(1, Math.round(fontSize * 0.12));
   const effectColorDefault = autoContrastText.toLowerCase() === textColor.toLowerCase()
