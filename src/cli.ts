@@ -25,6 +25,11 @@ import { transformFlipCommand } from "./commands/transform_flip";
 import { transformCropCommand } from "./commands/transform_crop";
 import { transformPadCommand } from "./commands/transform_pad";
 import { transformTrimCommand } from "./commands/transform_trim";
+import { fxShadowCommand } from "./commands/fx_shadow";
+import { fxOutlineCommand } from "./commands/fx_outline";
+import { fxGlowCommand } from "./commands/fx_glow";
+import { fxBlurCommand } from "./commands/fx_blur";
+import { fxTintCommand } from "./commands/fx_tint";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -722,6 +727,110 @@ Examples:
 `)
     .action(async (image, options) => {
       await transformTrimCommand(image, options);
+    });
+
+  const fx = program.command("fx").description("Visual effects (shadow, outline, glow, blur, tint)");
+
+  fx.command("shadow <image>")
+    .description("Add a drop shadow behind opaque content")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--color <hex>", "Shadow color (default: #000000)")
+    .option("--opacity <0..1>", "Shadow opacity (default: 0.5)")
+    .option("--blur <px>", "Shadow blur radius / sigma (default: 10)")
+    .option("--dx <px>", "Horizontal offset (default: 0)")
+    .option("--dy <px>", "Vertical offset (default: 4)")
+    .option("--spread <px>", "Spread / dilate radius (default: 0)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon fx shadow sprite.png --out sprite-shadow.png
+  eikon fx shadow icon.png --color "#0000ff" --blur 15 --dx 5 --dy 5 --opacity 0.7 --out out.png
+  eikon fx shadow logo.png --spread 3 --blur 8 --out logo-shadow.png --force
+`)
+    .action(async (image, options) => {
+      await fxShadowCommand(image, options);
+    });
+
+  fx.command("outline <image>")
+    .description("Add a colored outline around opaque content")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--color <hex>", "Outline color (default: #000000)")
+    .option("--width <px>", "Outline width in pixels (default: 2)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon fx outline sprite.png --out sprite-outlined.png
+  eikon fx outline icon.png --color "#ff0000" --width 4 --out out.png --force
+`)
+    .action(async (image, options) => {
+      await fxOutlineCommand(image, options);
+    });
+
+  fx.command("glow <image>")
+    .description("Add a centered outer glow around opaque content")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--color <hex>", "Glow color (default: #ffffff)")
+    .option("--opacity <0..1>", "Glow opacity (default: 0.8)")
+    .option("--blur <px>", "Glow blur radius / sigma (default: 10)")
+    .option("--spread <px>", "Spread / dilate radius (default: 0)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon fx glow sprite.png --out sprite-glow.png
+  eikon fx glow icon.png --color "#00ff00" --blur 15 --opacity 1 --out out.png --force
+  eikon fx glow logo.png --spread 3 --blur 8 --out logo-glow.png
+`)
+    .action(async (image, options) => {
+      await fxGlowCommand(image, options);
+    });
+
+  fx.command("blur <image>")
+    .description("Apply gaussian blur to an image")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--sigma <n>", "Blur sigma (default: 3, minimum: 0.3)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon fx blur photo.png --out blurred.png
+  eikon fx blur photo.png --sigma 10 --out blurred.png --force
+`)
+    .action(async (image, options) => {
+      await fxBlurCommand(image, options);
+    });
+
+  fx.command("tint <image>")
+    .description("Apply a color tint / colorize effect")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .requiredOption("--color <hex>", "Tint color")
+    .option("--amount <0..1>", "Tint strength (default: 1.0, full colorize)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon fx tint photo.png --color "#0000ff" --out tinted.png
+  eikon fx tint photo.png --color "#ff0000" --amount 0.5 --out tinted.png --force
+`)
+    .action(async (image, options) => {
+      await fxTintCommand(image, options);
     });
 
   // Help command as first-class command
