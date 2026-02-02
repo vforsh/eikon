@@ -13,6 +13,7 @@ compatibility: Requires Bun and an OpenRouter API key (env, file, stdin, or conf
 - **Edit images** with natural-language instructions (`eikon edit`)
 - **Save screenshots** from dataURL output (`eikon save`)
 - **Create placeholder images** with text (`eikon placeholder`)
+- **Adjust images** — brightness, contrast, saturation, vibrance (`eikon adjust`)
 - **Manage presets** and config (`eikon presets`, `eikon config`)
 
 ## Quick reference
@@ -201,7 +202,27 @@ eikon fx tint img.png --color "#ff6600" --out tinted.png
 eikon fx tint img.png --color "#3b82f6" --amount 0.5 --out tinted.png
 ```
 
-All transform/fx commands share: `--out` (required), `--force`, `--json`, `--plain`, `--quiet`.
+### Adjust (image adjustments)
+
+```bash
+# Brightness (factor 0..10, default 1.0; <1 darken, >1 brighten, 0 = black)
+eikon adjust brightness img.png --factor 1.5 --out bright.png
+eikon adjust brightness img.png --factor 0.5 --out dark.png
+
+# Contrast (factor 0..10, default 1.0; centered on middle gray)
+eikon adjust contrast img.png --factor 1.5 --out contrast.png
+eikon adjust contrast img.png --factor 0.5 --out low-contrast.png
+
+# Saturation (factor 0..10, default 1.0; 0 = grayscale)
+eikon adjust saturation img.png --factor 2 --out saturated.png
+eikon adjust saturation img.png --factor 0 --out grayscale.png
+
+# Vibrance (amount -1..1, default 0.5; smart saturation that protects already-saturated colors)
+eikon adjust vibrance img.png --amount 0.8 --out vibrant.png
+eikon adjust vibrance img.png --amount -0.5 --out muted.png
+```
+
+All transform/fx/adjust commands share: `--out` (required), `--force`, `--json`, `--plain`, `--quiet`.
 
 ### Write output to file
 

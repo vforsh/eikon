@@ -31,6 +31,10 @@ import { fxOutlineCommand } from "./commands/fx_outline";
 import { fxGlowCommand } from "./commands/fx_glow";
 import { fxBlurCommand } from "./commands/fx_blur";
 import { fxTintCommand } from "./commands/fx_tint";
+import { adjustBrightnessCommand } from "./commands/adjust_brightness";
+import { adjustContrastCommand } from "./commands/adjust_contrast";
+import { adjustSaturationCommand } from "./commands/adjust_saturation";
+import { adjustVibranceCommand } from "./commands/adjust_vibrance";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -855,6 +859,84 @@ Examples:
 `)
     .action(async (image, options) => {
       await fxTintCommand(image, options);
+    });
+
+  const adjust = program.command("adjust").description("Image adjustments (brightness, contrast, saturation, vibrance)");
+
+  adjust
+    .command("brightness <image>")
+    .description("Adjust image brightness")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--factor <n>", "Brightness multiplier (default: 1.0, range 0..10)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon adjust brightness photo.png --factor 1.5 --out bright.png
+  eikon adjust brightness photo.png --factor 0.5 --out dark.png --force
+`)
+    .action(async (image, options) => {
+      await adjustBrightnessCommand(image, options);
+    });
+
+  adjust
+    .command("contrast <image>")
+    .description("Adjust image contrast")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--factor <n>", "Contrast multiplier (default: 1.0, range 0..10)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon adjust contrast photo.png --factor 1.5 --out contrast.png
+  eikon adjust contrast photo.png --factor 0.5 --out low-contrast.png --force
+`)
+    .action(async (image, options) => {
+      await adjustContrastCommand(image, options);
+    });
+
+  adjust
+    .command("saturation <image>")
+    .description("Adjust image saturation")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--factor <n>", "Saturation multiplier (default: 1.0, range 0..10)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon adjust saturation photo.png --factor 2 --out saturated.png
+  eikon adjust saturation photo.png --factor 0 --out grayscale.png --force
+`)
+    .action(async (image, options) => {
+      await adjustSaturationCommand(image, options);
+    });
+
+  adjust
+    .command("vibrance <image>")
+    .description("Adjust image vibrance (smart saturation that protects already-saturated colors)")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--amount <n>", "Vibrance amount (default: 0.5, range -1..1)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon adjust vibrance photo.png --amount 0.8 --out vibrant.png
+  eikon adjust vibrance photo.png --amount -0.5 --out muted.png --force
+`)
+    .action(async (image, options) => {
+      await adjustVibranceCommand(image, options);
     });
 
   // Help command as first-class command
