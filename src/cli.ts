@@ -25,6 +25,7 @@ import { transformFlipCommand } from "./commands/transform_flip";
 import { transformCropCommand } from "./commands/transform_crop";
 import { transformPadCommand } from "./commands/transform_pad";
 import { transformTrimCommand } from "./commands/transform_trim";
+import { transformMaskCommand } from "./commands/transform_mask";
 import { fxShadowCommand } from "./commands/fx_shadow";
 import { fxOutlineCommand } from "./commands/fx_outline";
 import { fxGlowCommand } from "./commands/fx_glow";
@@ -727,6 +728,29 @@ Examples:
 `)
     .action(async (image, options) => {
       await transformTrimCommand(image, options);
+    });
+
+  transform
+    .command("mask <image>")
+    .description("Apply a shape mask (circle, rounded-rect, squircle) to an image")
+    .requiredOption("--shape <spec>", 'Shape mask: "circle", "rounded[:<radius>]", "squircle[:<radius>]"')
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon transform mask icon.png --shape circle --out icon-circle.png
+  eikon transform mask icon.png --shape rounded --out icon-rounded.png
+  eikon transform mask icon.png --shape rounded:20 --out icon-rounded.png
+  eikon transform mask icon.png --shape rounded:15% --out icon-rounded.png
+  eikon transform mask icon.png --shape squircle --out icon-squircle.png
+  eikon transform mask icon.png --shape squircle:25% --out icon-squircle.png
+`)
+    .action(async (image, options) => {
+      await transformMaskCommand(image, options);
     });
 
   const fx = program.command("fx").description("Visual effects (shadow, outline, glow, blur, tint)");
