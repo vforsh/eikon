@@ -147,6 +147,62 @@ eikon placeholder -w 512 -h 512 --bg-linear "#667eea,#764ba2,135" --mask squircl
 eikon placeholder -w 512 -h 512 --bg-linear "#667eea,#764ba2,135" --mask "squircle:22%" --out ios-icon.png
 ```
 
+### Transform images
+
+```bash
+# Rotate (degrees, any angle)
+eikon transform rotate img.png --angle 90 --out rotated.png
+eikon transform rotate img.png --angle 45 --bg-color "#ff0000" --out tilted.png
+
+# Flip
+eikon transform flip img.png --horizontal --out flipped.png
+eikon transform flip img.png --vertical --out flipped.png
+
+# Crop (px or %)
+eikon transform crop img.png --left 10 --top 10 --width 200 --height 200 --out cropped.png
+eikon transform crop img.png --left 10% --right 10% --out cropped.png
+
+# Pad (px, per-side or --all)
+eikon transform pad img.png --all 20 --out padded.png
+eikon transform pad img.png --top 10 --bottom 10 --bg-color "#000" --out padded.png
+
+# Trim transparent pixels (alpha-based)
+eikon transform trim img.png --out trimmed.png
+eikon transform trim img.png --threshold 10 --padding 5 --out trimmed.png
+eikon transform trim img.png --top --bottom --out trimmed.png  # specific sides only
+
+# Mask to shape (circle, rounded, squircle)
+eikon transform mask img.png --shape circle --out masked.png
+eikon transform mask img.png --shape "rounded:20" --out masked.png
+eikon transform mask img.png --shape "squircle:15%" --out masked.png
+```
+
+### FX (visual effects)
+
+```bash
+# Drop shadow
+eikon fx shadow img.png --out shadow.png
+eikon fx shadow img.png --color "#000" --opacity 0.5 --blur 10 --dx 0 --dy 4 --spread 0 --out shadow.png
+
+# Outline (stroke around opaque pixels)
+eikon fx outline img.png --out outlined.png
+eikon fx outline img.png --color "#ff0000" --width 3 --out outlined.png
+
+# Glow
+eikon fx glow img.png --out glow.png
+eikon fx glow img.png --color "#fff" --opacity 0.8 --blur 10 --spread 0 --out glow.png
+
+# Gaussian blur
+eikon fx blur img.png --out blurred.png
+eikon fx blur img.png --sigma 5 --out blurred.png
+
+# Color tint
+eikon fx tint img.png --color "#ff6600" --out tinted.png
+eikon fx tint img.png --color "#3b82f6" --amount 0.5 --out tinted.png
+```
+
+All transform/fx commands share: `--out` (required), `--force`, `--json`, `--plain`, `--quiet`.
+
 ### Write output to file
 
 ```bash

@@ -1,122 +1,63 @@
----
-description: Use Bun instead of Node.js, npm, pnpm, or vite.
-globs: "*.ts, *.tsx, *.html, *.css, *.js, *.jsx, package.json"
-alwaysApply: false
----
+# CLAUDE.md
 
-Default to using Bun instead of Node.js.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Use `bunx <package> <command>` instead of `npx <package> <command>`
-- Bun automatically loads .env, so don't use dotenv.
+## What is Eikon
 
-## TODOs
+CLI tool for image analysis, generation, editing, and processing via OpenRouter vision models + local Sharp operations. Runs on **Bun** (>=1.3.5) — no build step; TypeScript executed directly.
 
-When the user asks to add a to-do, you MUST update `TODO.md` and place the new item in one of these sections:
+## Commands
 
-- High priority
-- Medium priority
-- Low priority
-- Nice to have (lowest priority)
+```bash
+bun install          # install deps
+bun test             # all tests
+bun test tests/e2e.test.ts        # E2E only
+bun test tests/placeholder.test.ts # placeholder only
+bun test tests/resize.test.ts     # resize only
+./index.ts --help    # run CLI locally
+```
 
-Each to-do must be a separate bullet point, written in 3–5 sentences max. The bullet must include the relevant files (or directories) that will be helpful to complete the to-do.
+No lint/format tooling configured. No build step — Bun runs `.ts` directly via shebang.
 
-## APIs
+## Architecture
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+**Entry**: `index.ts` → `src/cli.ts:createProgram()` → Commander.js program with ~15 command groups.
+
+**Core modules**:
+- `src/cli.ts` — command registration, global options, error boundary
+- `src/openrouter.ts` — OpenRouter API client (chat completions, image ops, model listing)
+- `src/image.ts` — image loading, metadata extraction, resizing (Sharp)
+- `src/config.ts` — TOML config parsing (`~/.config/eikon/config.toml`)
+- `src/errors.ts` — typed error hierarchy with exit codes (0-8)
+- `src/output.ts` — output rendering (human/plain/JSON) + file output policy
+- `src/resize.ts` — resize dimension calculation
+- `src/mask.ts` — shape masking (circle, rounded-rect, squircle) via SVG
+- `src/presets.ts` — built-in prompt templates from `prompts/` dir
+- `src/env.ts` — environment variable accessors
+
+**Command pattern**: each command lives in `src/commands/<name>.ts`, exports a setup function that receives a Commander parent command, defines args/options/action. Commands throw `EikonError` subclasses; the error boundary in `cli.ts` catches and renders them.
+
+**Command groups**: `analyze`, `upscale`, `generate`, `edit`, `save`, `ai` (remove-bg/extend/variations/describe), `atlas` (split/extract/create), `transform` (rotate/flip/crop/pad/trim/mask), `fx` (shadow/outline/glow/blur/tint), `placeholder`, `compose`, `presets`, `config`, `openrouter`.
+
+**Config precedence**: CLI flags → env vars → config file → defaults.
+
+**Output modes** (mutually exclusive): human (default), `--plain`, `--json`. File output via `--output` (+ `--quiet` to suppress stdout).
+
+## Dependencies
+
+- `commander` — CLI argument parsing
+- `@openrouter/sdk` — OpenRouter API client
+- `sharp` — local image processing
+- `maxrects-packer` — sprite atlas bin packing
 
 ## Testing
 
-Use `bun test` to run tests.
+Tests spawn the CLI as a subprocess via `Bun.spawn` and check stdout/stderr/exit codes. Mock OpenRouter with `EIKON_MOCK_OPENROUTER=1` env var. Fixtures in `fixtures/`.
 
-```ts#index.test.ts
-import { test, expect } from "bun:test";
+## Environment Variables
 
-test("hello world", () => {
-  expect(1).toBe(1);
-});
-```
-
-## Frontend
-
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
-
-Server:
-
-```ts#index.ts
-import index from "./index.html"
-
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
-```
-
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
-
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
-
-With the following `frontend.tsx`:
-
-```tsx#frontend.tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
-
-// import .css files directly and it works
-import './index.css';
-
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
-
-root.render(<Frontend />);
-```
-
-Then, run index.ts
-
-```sh
-bun --hot ./index.ts
-```
-
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.mdx`.
+- `OPENROUTER_API_KEY` — API key (required for remote commands)
+- `OPENROUTER_MODEL` — default model override
+- `EIKON_TIMEOUT_MS` — request timeout (default 30000)
+- `EIKON_MOCK_OPENROUTER` — enable mock for tests
+- `NO_COLOR` — disable color output
