@@ -1,6 +1,6 @@
 ---
 name: eikon
-description: Use the eikon CLI to analyze images with OpenRouter vision models, edit images with natural-language instructions, upscale images locally or via API, generate images from prompts, and save dataURL screenshots. Use when working with images, vision AI, or visual analysis tasks.
+description: Use the eikon CLI to analyze images with OpenRouter vision models, upscale and process images locally, and save dataURL screenshots. Use when working with images, vision AI, or visual analysis tasks.
 compatibility: Requires Bun and an OpenRouter API key (env, file, stdin, or config).
 ---
 
@@ -8,9 +8,7 @@ compatibility: Requires Bun and an OpenRouter API key (env, file, stdin, or conf
 
 - **Analyze images** with vision models (`eikon analyze`, `eikon ./image.png`)
 - **Local image info** without LLM (`eikon analyze:local`)
-- **Upscale images** via OpenRouter or locally (`eikon upscale`, `eikon upscale:local`)
-- **Generate images** from text prompts (`eikon generate`)
-- **Edit images** with natural-language instructions (`eikon edit`)
+- **Upscale images** locally (`eikon upscale:local`)
 - **Save screenshots** from dataURL output (`eikon save`)
 - **Create placeholder images** with text (`eikon placeholder`)
 - **Adjust images** — brightness, contrast, saturation, vibrance (`eikon adjust`)
@@ -58,44 +56,12 @@ eikon analyze:local ./image.png --json
 eikon analyze:local ./image.png --plain
 ```
 
-### Upscale images
-
-Via OpenRouter (default model: `google/gemini-2.5-flash-image`):
-
-```bash
-eikon upscale ./image.png --out ./image@2x.png
-eikon upscale ./image.png --out ./image@4x.png --scale 4
-eikon upscale ./image.png --out ./image@2x.png --width 2400 --json
-```
-
-Locally via sharp:
+### Upscale images locally
 
 ```bash
 eikon upscale:local ./image.png --out ./image@2x.png
+eikon upscale:local ./image.png --out ./image@2x.png --scale 4
 eikon upscale:local ./image.png --out ./image@2x.png --height 2400
-```
-
-### Generate images
-
-See [Gemini Image Prompt Guide](./GEMINI_IMAGE_PROMPT_GUIDE.md) for detailed prompting best practices.
-
-```bash
-eikon generate --prompt "Minimal icon of a cat" --out ./cat.png
-eikon generate --prompt "Same style, new pose" --ref /abs/path/ref.png --out ./out.png
-eikon generate --prompt "Combine these images" --ref /path/img1.png --ref /path/img2.png --out ./combined.png
-eikon generate --prompt "Use composition reference" --ref https://example.com/ref.png --out ./out.png
-eikon generate models  # List models that support image generation
-```
-
-### Edit an image (AI)
-
-Edits an existing image using a natural-language instruction and writes the edited image to `--out`.
-
-```bash
-eikon edit photo.png --prompt "Remove the background" --out photo-nobg.png
-eikon edit ui.png --prompt "Change the primary button color to blue" --out ui-blue.png
-eikon edit screenshot.png --prompt "Blur the email addresses" --out redacted.png
-echo "Make it warmer" | eikon edit photo.png --prompt-stdin --out warm.png
 ```
 
 ### Save from dataURL
@@ -255,9 +221,6 @@ eikon config init  # Creates ~/.config/eikon/config.toml
 apiKey = "sk-or-v1-..."
 model = "google/gemini-3-flash-preview"
 analyzeModel = "google/gemini-3-flash-preview"
-generateModel = "google/gemini-3-pro-image-preview"
-editModel = "google/gemini-3-pro-image-preview"
-upscaleModel = "google/gemini-2.5-flash-image"
 timeoutMs = 30000
 ```
 
@@ -267,7 +230,7 @@ Mutually exclusive:
 
 - **Default (human)**: human-readable response
 - **`--plain`**: stable, line-oriented output
-- **`--json`**: stable JSON object (shape depends on command; e.g. `edit` includes `outPath`, `mime`, `bytes`, `model`, `source`, `timingMs`)
+- **`--json`**: stable JSON object (shape depends on command)
 
 ## Exit codes
 

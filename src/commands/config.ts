@@ -24,8 +24,6 @@ export async function configInitCommand(opts: { force?: boolean; print?: boolean
     `# apiKey = "sk-or-v1-..."\n` +
     `# model = "google/gemini-3-flash-preview"\n` +
     `# analyzeModel = "google/gemini-3-flash-preview"\n` +
-    `# generateModel = "google/gemini-3-pro-image-preview"\n` +
-    `# upscaleModel = "google/gemini-2.5-flash-image"\n` +
     `# timeoutMs = 30000\n`;
   await Bun.write(DEFAULT_CONFIG_PATH, template);
 

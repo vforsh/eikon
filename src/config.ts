@@ -9,9 +9,6 @@ export interface Config {
   apiKey?: string;
   model?: string;
   analyzeModel?: string;
-  generateModel?: string;
-  upscaleModel?: string;
-  editModel?: string;
   timeoutMs?: number;
 }
 
@@ -39,18 +36,6 @@ export function stringifyConfigToml(config: Config): string {
     lines.push(`analyzeModel = "${escapeTomlString(config.analyzeModel)}"`);
   }
 
-  if (config.generateModel !== undefined) {
-    lines.push(`generateModel = "${escapeTomlString(config.generateModel)}"`);
-  }
-
-  if (config.upscaleModel !== undefined) {
-    lines.push(`upscaleModel = "${escapeTomlString(config.upscaleModel)}"`);
-  }
-
-  if (config.editModel !== undefined) {
-    lines.push(`editModel = "${escapeTomlString(config.editModel)}"`);
-  }
-
   if (config.timeoutMs !== undefined) {
     lines.push(`timeoutMs = ${config.timeoutMs}`);
   }
@@ -75,9 +60,6 @@ export async function loadConfigFile(path: string = DEFAULT_CONFIG_PATH): Promis
       apiKey: typeof parsed.apiKey === "string" ? parsed.apiKey : undefined,
       model: typeof parsed.model === "string" ? parsed.model : undefined,
       analyzeModel: typeof parsed.analyzeModel === "string" ? parsed.analyzeModel : undefined,
-      generateModel: typeof parsed.generateModel === "string" ? parsed.generateModel : undefined,
-      upscaleModel: typeof parsed.upscaleModel === "string" ? parsed.upscaleModel : undefined,
-      editModel: typeof parsed.editModel === "string" ? parsed.editModel : undefined,
       timeoutMs: typeof parsed.timeoutMs === "number" ? parsed.timeoutMs : undefined,
     };
   } catch (error) {
@@ -92,9 +74,6 @@ export async function getEffectiveConfig(flags: Config = {}): Promise<Config> {
     apiKey: flags.apiKey || ENV.OPENROUTER_API_KEY || fileConfig.apiKey,
     model: flags.model || ENV.OPENROUTER_MODEL || fileConfig.model,
     analyzeModel: flags.analyzeModel || fileConfig.analyzeModel,
-    generateModel: flags.generateModel || fileConfig.generateModel,
-    upscaleModel: flags.upscaleModel || fileConfig.upscaleModel,
-    editModel: flags.editModel || fileConfig.editModel,
     timeoutMs: flags.timeoutMs || ENV.EIKON_TIMEOUT_MS || fileConfig.timeoutMs || 30000,
   };
 }
