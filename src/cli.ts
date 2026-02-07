@@ -17,6 +17,7 @@ import { transformCropCommand } from "./commands/transform_crop";
 import { transformPadCommand } from "./commands/transform_pad";
 import { transformTrimCommand } from "./commands/transform_trim";
 import { transformMaskCommand } from "./commands/transform_mask";
+import { transformShiftCommand } from "./commands/transform_shift";
 import { fxShadowCommand } from "./commands/fx_shadow";
 import { fxOutlineCommand } from "./commands/fx_outline";
 import { fxGlowCommand } from "./commands/fx_glow";
@@ -531,6 +532,30 @@ Examples:
 `)
     .action(async (image, options) => {
       await transformMaskCommand(image, options);
+    });
+
+  transform
+    .command("shift <image>")
+    .description("Shift image content by x/y offset, filling empty space with a color")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--x <px>", "Horizontal shift in pixels (positive = right, negative = left)")
+    .option("--y <px>", "Vertical shift in pixels (positive = down, negative = up)")
+    .option("--bg-color <hex>", "Fill color for empty space (default: transparent)")
+    .option("--wrap", "Wrap content around edges instead of filling")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon transform shift image.png --x 50 --out shifted.png
+  eikon transform shift image.png --x -20 --y 30 --out shifted.png
+  eikon transform shift image.png --x 100 --bg-color "#ff0000" --out shifted.jpg
+  eikon transform shift image.png --x 50 --y 50 --wrap --out shifted.png
+`)
+    .action(async (image, options) => {
+      await transformShiftCommand(image, options);
     });
 
   const fx = program.command("fx").description("Visual effects (shadow, outline, glow, blur, tint)");

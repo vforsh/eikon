@@ -142,6 +142,11 @@ eikon transform trim img.png --top --bottom --out trimmed.png  # specific sides 
 eikon transform mask img.png --shape circle --out masked.png
 eikon transform mask img.png --shape "rounded:20" --out masked.png
 eikon transform mask img.png --shape "squircle:15%" --out masked.png
+
+# Shift content by x/y offset (positive = right/down, negative = left/up)
+eikon transform shift img.png --x 50 --out shifted.png
+eikon transform shift img.png --x -20 --y 30 --bg-color "#ff0000" --out shifted.png
+eikon transform shift img.png --x 100 --y 50 --wrap --out shifted.png
 ```
 
 ### FX (visual effects)
