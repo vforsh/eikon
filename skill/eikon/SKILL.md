@@ -12,6 +12,7 @@ compatibility: Requires Bun and an OpenRouter API key (env, file, stdin, or conf
 - **Save screenshots** from dataURL output (`eikon save`)
 - **Create placeholder images** with text (`eikon placeholder`)
 - **Adjust images** — brightness, contrast, saturation, vibrance (`eikon adjust`)
+- **Generate inpainting masks** (`eikon inpaint-mask`, or `--mask` on `transform pad`)
 - **Manage presets** and config (`eikon presets`, `eikon config`)
 
 ## Quick reference
@@ -132,6 +133,8 @@ eikon transform crop img.png --left 10% --right 10% --out cropped.png
 # Pad (px, per-side or --all)
 eikon transform pad img.png --all 20 --out padded.png
 eikon transform pad img.png --top 10 --bottom 10 --bg-color "#000" --out padded.png
+# Pad + generate inpainting mask in one step
+eikon transform pad img.png --left 48 --right 47 --bg-color "#FF00FF" --out padded.png --mask mask.png
 
 # Trim transparent pixels (alpha-based)
 eikon transform trim img.png --out trimmed.png
@@ -148,6 +151,42 @@ eikon transform shift img.png --x 50 --out shifted.png
 eikon transform shift img.png --x -20 --y 30 --bg-color "#ff0000" --out shifted.png
 eikon transform shift img.png --x 100 --y 50 --wrap --out shifted.png
 ```
+
+### Inpainting masks
+
+Generate black-and-white masks for inpainting/outpainting (white=inpaint, black=keep).
+
+**Via `transform pad --mask`** (recommended for pad+outpaint workflows):
+
+```bash
+# Pad image and generate companion mask in one step
+eikon transform pad banner.png --left 48 --right 47 --bg-color "#FF00FF" \
+  --out padded.png --mask mask.png
+```
+
+**Standalone `inpaint-mask` command** (region-based or color-detection):
+
+```bash
+# Region-based: mark strips as white
+eikon inpaint-mask photo.png --region "left:48" --region "right:47" --out mask.png
+eikon inpaint-mask photo.png --region "top:100" --out mask.png
+eikon inpaint-mask photo.png --region "border:50" --out mask.png
+
+# Percentage values
+eikon inpaint-mask photo.png --region "left:10%" --out mask.png
+
+# Arbitrary rectangle
+eikon inpaint-mask photo.png --region "rect:0,0,100,200" --out mask.png
+
+# Color detection: mark matching pixels as white
+eikon inpaint-mask photo.png --detect "#FF00FF" --out mask.png
+eikon inpaint-mask photo.png --detect "#FF00FF" --tolerance 10 --out mask.png
+
+# Invert: swap black/white
+eikon inpaint-mask photo.png --region "left:48" --invert --out mask.png
+```
+
+Region types: `left:<px|%>`, `right:<px|%>`, `top:<px|%>`, `bottom:<px|%>`, `border:<px|%>`, `rect:<x>,<y>,<w>,<h>`. Output must be `.png`. Use `--force` to overwrite.
 
 ### FX (visual effects)
 
