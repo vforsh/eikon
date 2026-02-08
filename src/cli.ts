@@ -27,6 +27,7 @@ import { adjustBrightnessCommand } from "./commands/adjust_brightness";
 import { adjustContrastCommand } from "./commands/adjust_contrast";
 import { adjustSaturationCommand } from "./commands/adjust_saturation";
 import { adjustVibranceCommand } from "./commands/adjust_vibrance";
+import { inpaintMaskCommand } from "./commands/inpaint_mask";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -464,6 +465,7 @@ Examples:
     .command("pad <image>")
     .description("Add padding around an image")
     .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--mask <file>", "Generate inpainting mask PNG (white=inpaint, black=keep)")
     .option("--all <px>", "Padding for all sides")
     .option("--top <px>", "Top padding (overrides --all)")
     .option("--right <px>", "Right padding (overrides --all)")
@@ -480,6 +482,7 @@ Examples:
   eikon transform pad image.png --all 20 --out padded.png
   eikon transform pad image.png --top 10 --bottom 10 --out padded.png
   eikon transform pad image.png --all 20 --bg-color "#ffffff" --out padded.jpg
+  eikon transform pad image.png --left 48 --right 47 --bg-color "#FF00FF" --out padded.png --mask mask.png
 `)
     .action(async (image, options) => {
       await transformPadCommand(image, options);
@@ -738,6 +741,31 @@ Examples:
 `)
     .action(async (image, options) => {
       await adjustVibranceCommand(image, options);
+    });
+
+  program
+    .command("inpaint-mask <image>")
+    .description("Generate an inpainting mask (white=inpaint, black=keep)")
+    .requiredOption("--out <file>", "Output path (must be .png)")
+    .option("--region <spec>", "Region to mark white (repeatable): left:<px>, right:<px>, top:<px>, bottom:<px>, border:<px>, rect:<x>,<y>,<w>,<h>", (v: string, prev: string[]) => prev.concat(v), [] as string[])
+    .option("--detect <color>", "Auto-detect padding color (hex)")
+    .option("--tolerance <n>", "Color match tolerance for --detect (0-255, default: 0)")
+    .option("--invert", "Swap black/white")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon inpaint-mask photo.png --region "left:48" --region "right:47" --out mask.png
+  eikon inpaint-mask photo.png --region "border:50" --out mask.png
+  eikon inpaint-mask photo.png --detect "#FF00FF" --out mask.png
+  eikon inpaint-mask photo.png --detect "#FF00FF" --tolerance 10 --out mask.png
+  eikon inpaint-mask photo.png --region "left:48" --invert --out mask.png
+`)
+    .action(async (image, options) => {
+      await inpaintMaskCommand(image, options);
     });
 
   // Help command as first-class command

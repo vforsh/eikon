@@ -6,6 +6,7 @@ import { renderJson, renderPlain } from "../output";
 
 export interface TransformPadOptions {
   out: string;
+  mask?: string;
   top?: string;
   right?: string;
   bottom?: string;
@@ -93,23 +94,20 @@ function parsePadding(value: string, name: string): number {
   return num;
 }
 
-function formatPlain(result: {
-  outPath: string;
-  mime: string;
-  bytes: number;
-  width: number;
-  height: number;
-  padding: { top: number; right: number; bottom: number; left: number };
-}): string {
-  const { padding } = result;
-  return [
+function formatPlain(result: Record<string, unknown>): string {
+  const padding = result.padding as { top: number; right: number; bottom: number; left: number };
+  const lines = [
     `Path: ${result.outPath}`,
     `MIME: ${result.mime}`,
     `Bytes: ${result.bytes}`,
     `Width: ${result.width}`,
     `Height: ${result.height}`,
     `Padding: ${padding.top} ${padding.right} ${padding.bottom} ${padding.left}`,
-  ].join("\n");
+  ];
+  if (result.maskPath) {
+    lines.push(`Mask: ${result.maskPath}`);
+  }
+  return lines.join("\n");
 }
 
 export async function transformPadCommand(image: string, opts: TransformPadOptions) {
@@ -161,6 +159,21 @@ export async function transformPadCommand(image: string, opts: TransformPadOptio
     ]);
   }
 
+  // Validate mask option
+  let maskPath: string | undefined;
+  if (opts.mask) {
+    maskPath = resolve(opts.mask);
+    if (!maskPath.toLowerCase().endsWith(".png")) {
+      throw new UsageError('--mask path must have .png extension (masks are always PNG)');
+    }
+    const maskFile = Bun.file(maskPath);
+    if ((await maskFile.exists()) && !opts.force) {
+      throw new FilesystemError(`Mask file already exists: ${maskPath}`, [
+        "Pass --force to overwrite.",
+      ]);
+    }
+  }
+
   // Get original image info
   const originalInfo = await getImageInfo(imagePath);
 
@@ -201,8 +214,36 @@ export async function transformPadCommand(image: string, opts: TransformPadOptio
   await mkdir(dirname(outPath), { recursive: true });
   await Bun.write(outPath, outputBytes);
 
+  // Generate inpainting mask if requested
+  let maskBytes: Buffer | undefined;
+  if (maskPath) {
+    const blackRect = await sharp({
+      create: {
+        width: originalInfo.width,
+        height: originalInfo.height,
+        channels: 3,
+        background: { r: 0, g: 0, b: 0 },
+      },
+    }).png().toBuffer();
+
+    maskBytes = await sharp({
+      create: {
+        width: newWidth,
+        height: newHeight,
+        channels: 3,
+        background: { r: 255, g: 255, b: 255 },
+      },
+    })
+      .composite([{ input: blackRect, top: topPad, left: leftPad }])
+      .png({ compressionLevel: 9 })
+      .toBuffer();
+
+    await mkdir(dirname(maskPath), { recursive: true });
+    await Bun.write(maskPath, maskBytes!);
+  }
+
   // Build result
-  const result = {
+  const result: Record<string, unknown> = {
     ok: true,
     outPath,
     mime,
@@ -219,6 +260,11 @@ export async function transformPadCommand(image: string, opts: TransformPadOptio
     },
     bgColor: opts.bgColor || null,
   };
+
+  if (maskPath && maskBytes) {
+    result.maskPath = maskPath;
+    result.maskBytes = maskBytes.length;
+  }
 
   // Output handling
   if (opts.json) {
