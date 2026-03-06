@@ -47,6 +47,7 @@ type GuardrailsResponse = {
 type OpenRouterOptions = {
   apiKey?: string;
   json?: boolean;
+  quiet?: boolean;
 };
 
 export async function openrouterKeysCommand(opts: OpenRouterOptions) {
@@ -54,7 +55,7 @@ export async function openrouterKeysCommand(opts: OpenRouterOptions) {
   const response = await fetchOpenRouter<KeysResponse>("/keys", apiKey);
 
   if (opts.json) {
-    renderJson(response);
+    renderJson({ ok: true, command: "openrouter keys", data: response.data });
     return;
   }
 
@@ -65,7 +66,9 @@ export async function openrouterKeysCommand(opts: OpenRouterOptions) {
   }
 
   const blocks = entries.map(formatKeyEntry);
-  renderHuman(blocks.join("\n\n"));
+  if (!opts.quiet) {
+    renderHuman(blocks.join("\n\n"));
+  }
 }
 
 export async function openrouterGuardrailsCommand(opts: OpenRouterOptions) {
@@ -73,7 +76,12 @@ export async function openrouterGuardrailsCommand(opts: OpenRouterOptions) {
   const response = await fetchOpenRouter<GuardrailsResponse>("/guardrails", apiKey);
 
   if (opts.json) {
-    renderJson(response);
+    renderJson({
+      ok: true,
+      command: "openrouter guardrails",
+      data: response.data,
+      totalCount: response.total_count,
+    });
     return;
   }
 
@@ -84,7 +92,9 @@ export async function openrouterGuardrailsCommand(opts: OpenRouterOptions) {
   }
 
   const blocks = entries.map(formatGuardrailEntry);
-  renderHuman(blocks.join("\n\n"));
+  if (!opts.quiet) {
+    renderHuman(blocks.join("\n\n"));
+  }
 }
 
 function resolveApiKey(opts: OpenRouterOptions) {

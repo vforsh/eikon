@@ -174,6 +174,7 @@ export async function transformRotateCommand(image: string, opts: TransformRotat
   // Build result
   const result = {
     ok: true,
+    command: "transform rotate",
     outPath,
     mime,
     bytes: outputBytes.length,

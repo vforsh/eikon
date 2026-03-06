@@ -225,6 +225,7 @@ export async function transformShiftCommand(image: string, opts: TransformShiftO
 
   const result = {
     ok: true,
+    command: "transform shift",
     outPath,
     mime,
     bytes: outputBytes.length,

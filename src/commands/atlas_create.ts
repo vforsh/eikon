@@ -8,9 +8,10 @@ import { renderJson, renderPlain } from "../output";
 export interface AtlasCreateOptions {
   out: string;
   padding?: string;
-  json?: boolean; // --no-json sets this to false
+  metadata?: boolean; // --no-metadata sets this to false
   format?: "hash" | "array";
   force?: boolean;
+  json?: boolean;
   jsonOutput?: boolean;
   plain?: boolean;
   quiet?: boolean;
@@ -315,9 +316,9 @@ export async function atlasCreateCommand(
   // Write atlas
   await Bun.write(outPath, finalBuffer);
 
-  // Generate JSON if not disabled (--no-json sets opts.json to false)
+  // Generate metadata if not disabled (--no-metadata sets opts.metadata to false)
   let jsonPath: string | null = null;
-  if (opts.json !== false) {
+  if (opts.metadata !== false) {
     const format = opts.format || "hash";
     const jsonData = generateTexturePackerJSON(
       outPath,
@@ -343,18 +344,19 @@ export async function atlasCreateCommand(
   // Build result
   const result = {
     ok: true,
+    command: "atlas create",
     atlasPath: outPath,
     atlasWidth,
     atlasHeight,
     atlasBytes: finalBuffer.length,
     spriteCount: packedSprites.length,
     jsonPath,
-    jsonFormat: opts.json === false ? null : opts.format || "hash",
+    jsonFormat: opts.metadata === false ? null : opts.format || "hash",
     sprites: packedSprites,
   };
 
   // Output handling
-  if (opts.jsonOutput) {
+  if (opts.json || opts.jsonOutput) {
     renderJson(result);
   } else if (opts.plain) {
     renderPlain(formatPlain(result));

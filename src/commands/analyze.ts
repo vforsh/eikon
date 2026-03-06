@@ -117,6 +117,7 @@ export async function analyzeCommand(
 
   const result: AnalysisResult = {
     ok: true,
+    command: "analyze",
     text,
     meta: {
       model: config.analyzeModel || config.model || "google/gemini-3-flash-preview",

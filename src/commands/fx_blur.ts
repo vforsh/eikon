@@ -110,6 +110,7 @@ export async function fxBlurCommand(image: string, opts: FxBlurOptions) {
   // Build result
   const result = {
     ok: true,
+    command: "fx blur",
     outPath,
     mime,
     bytes: outputBytes.length,

@@ -13,7 +13,8 @@ compatibility: Requires Bun and an OpenRouter API key (env, file, stdin, or conf
 - **Create placeholder images** with text (`eikon placeholder`)
 - **Adjust images** — brightness, contrast, saturation, vibrance (`eikon adjust`)
 - **Generate inpainting masks** (`eikon inpaint-mask`, or `--mask` on `transform pad`)
-- **Manage presets** and config (`eikon presets`, `eikon config`)
+- **Manage presets** and config (`eikon presets list|show`, `eikon config`)
+- **Inspect command metadata** (`eikon help --json`, `eikon describe`)
 
 ## Quick reference
 
@@ -34,6 +35,15 @@ eikon ./image.png "Summarize" --model google/gemini-2.5-flash
 
 # JSON output
 eikon ./image.png "Extract labels" --json
+```
+
+### Introspect the CLI
+
+```bash
+eikon help --json
+eikon help atlas split --json
+eikon describe analyze
+eikon describe atlas split
 ```
 
 ### Downsize before upload
@@ -305,8 +315,8 @@ Mutually exclusive:
 List available presets:
 
 ```bash
-eikon presets
-eikon presets --json
+eikon presets list
+eikon presets list --json
 eikon presets show web-ui
 ```
 

@@ -143,6 +143,7 @@ export async function adjustVibranceCommand(image: string, opts: AdjustVibranceO
 
   const outputResult = {
     ok: true,
+    command: "adjust vibrance",
     outPath,
     mime,
     bytes: outputBytes.length,

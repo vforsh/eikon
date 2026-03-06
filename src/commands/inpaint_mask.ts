@@ -272,6 +272,7 @@ export async function inpaintMaskCommand(image: string, opts: InpaintMaskOptions
   // Build result
   const result: Record<string, unknown> = {
     ok: true,
+    command: "inpaint-mask",
     outPath,
     bytes: maskBuffer.length,
     width,

@@ -74,6 +74,7 @@ export async function upscaleLocalCommand(imageArg: string, opts: UpscaleLocalOp
 
   const result = {
     ok: true,
+    command: "upscale:local",
     outPath,
     mime: info.mime,
     bytes: outputBytes.length,

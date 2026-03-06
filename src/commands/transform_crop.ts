@@ -194,6 +194,7 @@ export async function transformCropCommand(image: string, opts: TransformCropOpt
   // Build result
   const result = {
     ok: true,
+    command: "transform crop",
     outPath,
     mime,
     bytes: outputBytes.length,

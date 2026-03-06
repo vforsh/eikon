@@ -284,6 +284,7 @@ export async function fxShadowCommand(image: string, opts: FxShadowOptions) {
   // Build result
   const result = {
     ok: true,
+    command: "fx shadow",
     outPath,
     mime,
     bytes: outputBytes.length,

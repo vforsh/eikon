@@ -101,6 +101,7 @@ export async function adjustBrightnessCommand(image: string, opts: AdjustBrightn
 
   const result = {
     ok: true,
+    command: "adjust brightness",
     outPath,
     mime,
     bytes: outputBytes.length,

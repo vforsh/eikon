@@ -245,6 +245,7 @@ export async function transformPadCommand(image: string, opts: TransformPadOptio
   // Build result
   const result: Record<string, unknown> = {
     ok: true,
+    command: "transform pad",
     outPath,
     mime,
     bytes: outputBytes.length,

@@ -130,6 +130,7 @@ export async function transformMaskCommand(image: string, opts: TransformMaskOpt
   // Build result
   const result = {
     ok: true,
+    command: "transform mask",
     outPath,
     mime,
     bytes: outputBytes.length,

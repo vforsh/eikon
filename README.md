@@ -51,15 +51,19 @@ eikon <command> [options]
 Commands:
   analyze       Analyze an image with a prompt/preset (default command)
   analyze:local Show local image information (no LLM)
-  upscale       Upscale an image via OpenRouter image-edit
   upscale:local Upscale an image locally via sharp
-  fx            Local image effects (shadow, inner-shadow, outline, glow, blur, tint)
-  generate      Generate an image from a text prompt
-  edit          Edit an image using AI with natural language instructions
   save          Save an image from piped dataURL or --input file
+  placeholder   Generate a placeholder image with background and text
+  compose       Layer images in order with opacity and blend modes
   presets       List/show prompt presets
   config        Manage config (init/show/path)
   openrouter    OpenRouter provisioning endpoints
+  atlas         Sprite atlas operations
+  transform     Image transformation operations
+  fx            Visual effects (shadow, inner-shadow, outline, glow, blur, tint)
+  adjust        Image adjustments (brightness, contrast, saturation, vibrance)
+  inpaint-mask  Generate an inpainting mask (white=inpaint, black=keep)
+  describe      Describe a command as machine-readable JSON
   help          Show help for a command
 ```
 
@@ -69,6 +73,8 @@ Commands:
 # Help
 eikon --help
 eikon help analyze
+eikon help analyze --json
+eikon describe atlas split
 
 # Analyze (explicit)
 eikon analyze ./image.png "Describe the UI"
@@ -110,27 +116,36 @@ eikon analyze:local ./image.png
 eikon analyze:local ./image.png --plain
 eikon analyze:local ./image.png --json
 
-# Upscale via OpenRouter image-edit (default model: google/gemini-2.5-flash-image)
-eikon upscale ./image.png --out ./image@2x.png
-eikon upscale ./image.png --out ./image@4x.png --scale 4
-eikon upscale ./image.png --out ./image@2x.png --width 2400 --json
-
 # Upscale locally via sharp
 eikon upscale:local ./image.png --out ./image@2x.png
 eikon upscale:local ./image.png --out ./image@2x.png --height 2400 --plain
+
+# Create a placeholder image
+eikon placeholder --w 1200 --h 630 --bg-color "#111827" --out placeholder.png
+
+# Compose layers
+eikon compose --layer base.png --layer overlay.png:0.5:multiply --out result.png
+
+# Atlas operations
+eikon atlas split spritesheet.png --out ./sprites/
+eikon atlas split spritesheet.png --atlas-json sprites.json --out ./sprites/
+eikon atlas create ./sprites/ --out atlas.png
+
+# Transform images
+eikon transform rotate ./image.png --angle 90 --out rotated.png
+eikon transform pad ./image.png --all 32 --out padded.png
 
 # Add local image effects
 eikon fx shadow ./sprite.png --out ./sprite-shadow.png
 eikon fx inner-shadow ./button.png --color "#5b3413" --blur 6 --dy 3 --opacity 0.6 --out ./button-inset.png
 eikon fx glow ./icon.png --color "#ffd54a" --blur 12 --out ./icon-glow.png
 
-# Generate from a prompt (optional reference image)
-eikon generate --prompt "Minimal icon of a cat" --out-dir ./out
-eikon generate --prompt "Same style, new pose" --ref /abs/path/ref.png --out-dir ./out --json
-eikon generate --prompt "Use this as composition reference" --ref https://example.com/ref.png --out-dir ./out
-eikon generate models
-eikon generate models --details
-eikon generate models --supports-ref
+# Adjust images
+eikon adjust brightness ./photo.png --factor 1.2 --out ./bright.png
+eikon adjust vibrance ./photo.png --amount 0.8 --out ./vibrant.png
+
+# Generate inpainting masks
+eikon inpaint-mask ./photo.png --region "left:48" --out ./mask.png
 
 # Save an image from piped Argus/Playwright/etc dataURL output
 # This extracts the base64 payload, decodes it, and writes the bytes to a file.
@@ -157,11 +172,12 @@ Output modes are mutually exclusive:
 
 If `--output <file>` is provided, the result is written to the file and **also** printed to stdout (unless `--quiet` is set).
 
-### JSON schema (success)
+### JSON envelope (success)
 
 ```json
 {
   "ok": true,
+  "command": "analyze",
   "text": "…model response…",
   "meta": {
     "model": "google/gemini-3-flash-preview",
@@ -177,6 +193,47 @@ If `--output <file>` is provided, the result is written to the file and **also**
 }
 ```
 
+Every JSON success response includes:
+- `ok: true`
+- `command`: canonical command path, such as `analyze`, `atlas split`, or `config show`
+- command-specific fields alongside `ok` and `command`
+
+Every JSON error response uses:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "type": "usage",
+    "code": 2,
+    "message": "Human-readable error message",
+    "hints": []
+  }
+}
+```
+
+### Runtime introspection
+
+```bash
+# Machine-readable help for the whole CLI
+eikon help --json
+
+# Machine-readable help for a specific command
+eikon help analyze --json
+eikon help atlas split --json
+
+# Structured command description for agents
+eikon describe analyze
+eikon describe atlas split
+```
+
+`help --json` and `describe` return command metadata including:
+- positional arguments
+- options and whether they require values
+- aliases
+- subcommands
+- the canonical JSON success/error envelope shape
+
 ## Downsizing images
 
 - `--downsize`: downsizes to fit within **2048x2048** before upload.
@@ -185,63 +242,19 @@ If `--output <file>` is provided, the result is written to the file and **also**
   - multipliers (e.g. `x0.5`, `x0.25`)
 - If the image is already within limits, **no resize/re-encode is performed**.
 
-## Upscaling images
+## Local image processing commands
 
-- `eikon upscale` uses OpenRouter chat-completions image output. Default model: `google/gemini-2.5-flash-image`.
-- Supported models (as of 2026-01-18):
-  - `google/gemini-2.5-flash-image`
-  - `google/gemini-3-pro-image-preview`
-  - `openai/gpt-5-image`
-  - `openai/gpt-5-image-mini`
-- Provide exactly one of `--scale`, `--width`, or `--height` (defaults to `--scale 2`).
-- Downscale is not allowed; target dimensions must be >= original.
-- Output modes:
-  - default / `--plain`: path/mime/bytes/width/height (+ model for remote)
-  - `--json`: `{ ok, outPath, mime, width, height, bytes, model?, timingMs? }`
-
-## Generating images
-
-- `eikon generate` creates an image from a text prompt, optionally guided by a reference image.
-- `eikon generate models` lists OpenRouter models that support image generation (one ID per line; `--json` for JSON array).
-- `eikon generate models --details` prints concise metadata (modalities, context length, pricing).
-- `eikon generate models --supports-ref` filters to models that accept image references.
-- Required: `--prompt`, `--out-dir`
-- Optional: `--ref` accepts an absolute local path or a https:// URL (http:// allowed only for localhost).
-- Default model: `google/gemini-3-pro-image-preview`.
-- Output modes:
-  - default / `--plain`: path/mime/bytes/model (+ ref when provided)
-  - `--json`: `{ ok, outPath, mime, bytes, model, ref?, timingMs? }`
-
-## Editing images
-
-- `eikon edit` modifies an existing image using natural language instructions.
-- `eikon edit models` lists OpenRouter models that support image editing.
-- `eikon edit models --details` prints concise metadata (modalities, context length, pricing).
-- Uses a system prompt that emphasizes preserving the original image while making targeted changes.
-- Required: `<image>`, `--prompt`, `--out`
-- Default model: `google/gemini-3-pro-image-preview`.
-
-```bash
-# Remove background
-eikon edit photo.png --prompt "Remove the background" --out photo-nobg.png
-
-# Change colors
-eikon edit ui.png --prompt "Change the button color to blue" --out ui-blue.png
-
-# Redact content
-eikon edit screenshot.png --prompt "Blur the email addresses" --out redacted.png
-
-# Read prompt from stdin
-echo "Make it look warmer" | eikon edit photo.png --prompt-stdin --out warm.png
-
-# List edit-capable models
-eikon edit models
-eikon edit models --details
-```
-
-- Output modes:
-  - default / `--plain`: path/mime/bytes/model/source
-  - `--json`: `{ ok, outPath, mime, bytes, model, source, timingMs }`
+- `eikon upscale:local`: resize images locally via Sharp
+- `eikon placeholder`: generate placeholder images with text, gradients, and masks
+- `eikon compose`: layer multiple images with opacity, blend modes, and offsets
+- `eikon atlas split|extract|create`: split sprite sheets, extract frames, and build atlases
+  - `atlas split --atlas-json <file>`: use TexturePacker JSON as input
+  - `atlas extract --atlas-json <file>`: use TexturePacker JSON as input
+  - `atlas create --no-metadata`: skip sidecar TexturePacker JSON generation
+- `eikon transform rotate|flip|crop|pad|trim|mask|shift`: geometry and canvas operations
+- `eikon fx shadow|inner-shadow|outline|glow|blur|tint`: visual effects
+- `eikon adjust brightness|contrast|saturation|vibrance`: image adjustments
+- `eikon inpaint-mask`: generate black/white masks for inpainting workflows
 
 ## Exit codes
 
@@ -286,13 +299,10 @@ Supported keys:
 apiKey = "sk-or-v1-..."
 model = "google/gemini-3-flash-preview"
 analyzeModel = "google/gemini-3-flash-preview"
-generateModel = "google/gemini-3-pro-image-preview"
-upscaleModel = "google/gemini-2.5-flash-image"
-editModel = "google/gemini-3-pro-image-preview"
 timeoutMs = 30000
 ```
 
 Precedence: flags > env > config.
 
 Notes:
-- `analyzeModel`, `generateModel`, `upscaleModel`, `editModel` override `model` for their respective commands.
+- `analyzeModel` overrides `model` for `analyze`.

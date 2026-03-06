@@ -5,6 +5,7 @@ import { renderHuman, renderJson, renderPlain } from "../output";
 export interface AnalyzeLocalOptions {
   json?: boolean;
   plain?: boolean;
+  quiet?: boolean;
 }
 
 export async function analyzeLocalCommand(
@@ -17,6 +18,7 @@ export async function analyzeLocalCommand(
   if (opts.json) {
     renderJson({
       ok: true,
+      command: "analyze:local",
       info,
     });
     return;
@@ -65,5 +67,7 @@ function formatHuman(info: LocalImageInfo): string {
     return;
   }
 
-  renderHuman(formatHuman(info));
+  if (!opts.quiet) {
+    renderHuman(formatHuman(info));
+  }
 }

@@ -266,6 +266,7 @@ export async function fxGlowCommand(image: string, opts: FxGlowOptions) {
   // Build result
   const result = {
     ok: true,
+    command: "fx glow",
     outPath,
     mime,
     bytes: outputBytes.length,

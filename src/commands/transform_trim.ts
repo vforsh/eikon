@@ -309,6 +309,7 @@ export async function transformTrimCommand(image: string, opts: TransformTrimOpt
   // Build result
   const result = {
     ok: true,
+    command: "transform trim",
     outPath,
     mime,
     bytes: outputBytes.length,

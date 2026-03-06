@@ -287,6 +287,7 @@ export async function fxInnerShadowCommand(image: string, opts: FxInnerShadowOpt
 
   const result = {
     ok: true,
+    command: "fx inner-shadow",
     outPath,
     mime,
     bytes: outputBytes.length,

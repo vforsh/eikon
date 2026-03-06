@@ -131,6 +131,7 @@ export async function transformFlipCommand(image: string, opts: TransformFlipOpt
   // Build result
   const result = {
     ok: true,
+    command: "transform flip",
     outPath,
     mime,
     bytes: outputBytes.length,

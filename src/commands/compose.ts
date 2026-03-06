@@ -480,6 +480,7 @@ export async function composeCommand(opts: ComposeOptions) {
   // Build result
   const result = {
     ok: true,
+    command: "compose",
     outPath,
     mime,
     bytes: outputBytes.length,

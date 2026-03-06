@@ -783,6 +783,7 @@ export async function placeholderCommand(opts: PlaceholderOptions) {
   // Build result
   const result = {
     ok: true,
+    command: "placeholder",
     outPath,
     mime,
     bytes: outputBytes.length,

@@ -4,7 +4,7 @@ import { DEFAULT_CONFIG_PATH, getEffectiveConfig, stringifyConfigToml } from "..
 import { renderHuman, renderJson, renderPlain } from "../output";
 import { ConfigError } from "../errors";
 
-export async function configInitCommand(opts: { force?: boolean; print?: boolean; json?: boolean }) {
+export async function configInitCommand(opts: { force?: boolean; print?: boolean; json?: boolean; quiet?: boolean }) {
   const file = Bun.file(DEFAULT_CONFIG_PATH);
   let overwritten = false;
   
@@ -28,21 +28,25 @@ export async function configInitCommand(opts: { force?: boolean; print?: boolean
   await Bun.write(DEFAULT_CONFIG_PATH, template);
 
   if (opts.json) {
-    renderJson({ ok: true, path: DEFAULT_CONFIG_PATH, created: true, overwritten });
+    renderJson({ ok: true, command: "config init", path: DEFAULT_CONFIG_PATH, created: true, overwritten });
   } else {
-    if (opts.print) {
+    if (opts.print && !opts.quiet) {
       renderPlain(DEFAULT_CONFIG_PATH);
-    } else {
+    } else if (!opts.quiet) {
       renderHuman(`Wrote config to ${DEFAULT_CONFIG_PATH}`);
     }
   }
 }
 
-export async function configPathCommand() {
-  renderPlain(DEFAULT_CONFIG_PATH);
+export async function configPathCommand(opts: { json?: boolean; quiet?: boolean }) {
+  if (opts.json) {
+    renderJson({ ok: true, command: "config path", path: DEFAULT_CONFIG_PATH });
+  } else if (!opts.quiet) {
+    renderPlain(DEFAULT_CONFIG_PATH);
+  }
 }
 
-export async function configShowCommand(opts: { json?: boolean }) {
+export async function configShowCommand(opts: { json?: boolean; quiet?: boolean }) {
   const config = await getEffectiveConfig();
   
   // Redact API key
@@ -52,8 +56,8 @@ export async function configShowCommand(opts: { json?: boolean }) {
   };
 
   if (opts.json) {
-    renderJson({ ok: true, config: safeConfig });
-  } else {
+    renderJson({ ok: true, command: "config show", config: safeConfig });
+  } else if (!opts.quiet) {
     renderPlain(stringifyConfigToml(safeConfig));
   }
 }

@@ -1,4 +1,4 @@
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { analyzeCommand } from "./commands/analyze";
 import { saveCommand } from "./commands/save";
 import { presetsListCommand, presetsShowCommand } from "./commands/presets";
@@ -29,6 +29,7 @@ import { adjustContrastCommand } from "./commands/adjust_contrast";
 import { adjustSaturationCommand } from "./commands/adjust_saturation";
 import { adjustVibranceCommand } from "./commands/adjust_vibrance";
 import { inpaintMaskCommand } from "./commands/inpaint_mask";
+import { findCommand, serializeCommand } from "./describe";
 import { EikonError, ExitCode } from "./errors";
 import { renderError, renderJson } from "./output";
 
@@ -93,6 +94,7 @@ export async function createProgram() {
     .argument("<image>", "Path to image file (png/jpg/webp)")
     .option("--plain", "Stable plain-text output")
     .option("--json", "JSON output")
+    .option("--quiet", "Suppress non-error output")
     .addHelpText("before", `
   Examples:
     eikon analyze:local screenshot.png
@@ -110,6 +112,7 @@ export async function createProgram() {
     .requiredOption("--out <file>", "Output path for the image bytes")
     .option("--force", "Overwrite if --out exists")
     .option("--json", "Output JSON")
+    .option("--quiet", "Suppress non-error output")
     .addHelpText("before", `
   Examples:
     argus eval ... | eikon save --out screenshot.png
@@ -224,6 +227,7 @@ export async function createProgram() {
     .description("List available presets")
     .option("--json", "Output JSON")
     .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
     .addHelpText("before", `
 Examples:
   eikon presets list
@@ -238,6 +242,7 @@ Examples:
     .command("show <name>")
     .description("Show a preset's prompt")
     .option("--json", "Output JSON")
+    .option("--quiet", "Suppress non-error output")
     .addHelpText("before", `
 Examples:
   eikon presets show web-ui
@@ -255,6 +260,7 @@ Examples:
     .option("--force", "Overwrite existing config")
     .option("--print", "Print the resulting path")
     .option("--json", "Output JSON")
+    .option("--quiet", "Suppress non-error output")
     .addHelpText("before", `
 Examples:
   eikon config init
@@ -268,18 +274,21 @@ Examples:
   config
     .command("path")
     .description("Print effective config path")
+    .option("--json", "Output JSON")
+    .option("--quiet", "Suppress non-error output")
     .addHelpText("before", `
 Examples:
   eikon config path
 `)
-    .action(async () => {
-      await configPathCommand();
+    .action(async (options) => {
+      await configPathCommand(options);
     });
 
   config
     .command("show")
     .description("Print effective config (redacted)")
     .option("--json", "Output JSON")
+    .option("--quiet", "Suppress non-error output")
     .addHelpText("before", `
 Examples:
   eikon config show
@@ -298,6 +307,7 @@ Examples:
     .description("List OpenRouter API keys (provisioning key required)")
     .option("--api-key <key>", "OpenRouter provisioning API key")
     .option("--json", "Output JSON")
+    .option("--quiet", "Suppress non-error output")
     .addHelpText("before", `
 Examples:
   eikon openrouter keys --api-key "$OPENROUTER_PROVISIONING_KEY"
@@ -312,6 +322,7 @@ Examples:
     .description("List OpenRouter guardrails (provisioning key required)")
     .option("--api-key <key>", "OpenRouter provisioning API key")
     .option("--json", "Output JSON")
+    .option("--quiet", "Suppress non-error output")
     .addHelpText("before", `
 Examples:
   eikon openrouter guardrails --api-key "$OPENROUTER_PROVISIONING_KEY"
@@ -327,18 +338,19 @@ Examples:
     .command("split <image>")
     .description("Split a sprite atlas into individual sprite images")
     .requiredOption("--out <dir>", "Output directory for extracted sprites")
-    .option("--json <file>", "TexturePacker JSON file for sprite regions")
-    .option("--auto", "Auto-detect sprites by transparency (default if no --json)")
+    .option("--atlas-json <file>", "TexturePacker JSON file for sprite regions")
+    .option("--auto", "Auto-detect sprites by transparency (default if no --atlas-json)")
     .option("--metadata", "Generate sprites.json metadata file")
     .option("--force", "Overwrite existing files")
-    .option("--json-output", "Output JSON")
+    .option("--json", "Output JSON")
+    .addOption(new Option("--json-output", "Deprecated alias for --json").hideHelp())
     .option("--plain", "Stable plain-text output")
     .option("--quiet", "Suppress non-error output")
     .option("--no-color", "Disable color")
     .addHelpText("before", `
 Examples:
   eikon atlas split spritesheet.png --out ./sprites/
-  eikon atlas split spritesheet.png --json sprites.json --out ./sprites/
+  eikon atlas split spritesheet.png --atlas-json sprites.json --out ./sprites/
   eikon atlas split spritesheet.png --out ./sprites/ --metadata
   eikon atlas split spritesheet.png --auto --out ./sprites/ --force
 `)
@@ -349,19 +361,20 @@ Examples:
   atlas
     .command("extract <image> <frames...>")
     .description("Extract specific frames from a sprite atlas (requires JSON data)")
-    .requiredOption("--json <file>", "TexturePacker JSON file for sprite regions")
+    .requiredOption("--atlas-json <file>", "TexturePacker JSON file for sprite regions")
     .requiredOption("--out <dir>", "Output directory for extracted frames")
     .option("--force", "Overwrite existing files")
-    .option("--json-output", "Output JSON")
+    .option("--json", "Output JSON")
+    .addOption(new Option("--json-output", "Deprecated alias for --json").hideHelp())
     .option("--plain", "Stable plain-text output")
     .option("--quiet", "Suppress non-error output")
     .option("--no-color", "Disable color")
     .addHelpText("before", `
 Examples:
-  eikon atlas extract spritesheet.png player_idle --json sprites.json --out ./frames/
-  eikon atlas extract spritesheet.png player_idle player_run --json sprites.json --out ./frames/
-  eikon atlas extract spritesheet.png "player_*" --json sprites.json --out ./frames/
-  eikon atlas extract spritesheet.png "enemy_?_idle" "player_*" --json sprites.json --out ./frames/
+  eikon atlas extract spritesheet.png player_idle --atlas-json sprites.json --out ./frames/
+  eikon atlas extract spritesheet.png player_idle player_run --atlas-json sprites.json --out ./frames/
+  eikon atlas extract spritesheet.png "player_*" --atlas-json sprites.json --out ./frames/
+  eikon atlas extract spritesheet.png "enemy_?_idle" "player_*" --atlas-json sprites.json --out ./frames/
 `)
     .action(async (image, frames, options) => {
       await atlasExtractCommand(image, frames, options);
@@ -374,9 +387,10 @@ Examples:
     .requiredOption("--out <file>", "Output atlas path (.png, .jpg, .webp)")
     .option("--padding <px>", "Padding between sprites (default: 1)")
     .option("--format <type>", 'JSON format: "hash" (default) or "array"')
-    .option("--no-json", "Skip JSON metadata generation")
+    .option("--no-metadata", "Skip JSON metadata generation")
     .option("--force", "Overwrite existing files")
-    .option("--json-output", "Output JSON")
+    .option("--json", "Output JSON")
+    .addOption(new Option("--json-output", "Deprecated alias for --json").hideHelp())
     .option("--plain", "Stable plain-text output")
     .option("--quiet", "Suppress non-error output")
     .option("--no-color", "Disable color")
@@ -386,7 +400,7 @@ Examples:
   eikon atlas create sprite1.png sprite2.png sprite3.png --out atlas.png
   eikon atlas create ./sprites/ --out atlas.png --padding 2
   eikon atlas create ./sprites/ --out atlas.png --format array
-  eikon atlas create ./sprites/ --out atlas.png --no-json
+  eikon atlas create ./sprites/ --out atlas.png --no-metadata
   eikon atlas bundle ./sprites/ --out atlas.png
 `)
     .action(async (inputs, options) => {
@@ -795,20 +809,35 @@ Examples:
 
   // Help command as first-class command
   program
-    .command("help [command]")
+    .command("help [command...]")
     .description("Display help for [command]")
-    .action((commandName) => {
-      if (commandName) {
-        const cmd = program.commands.find(c => c.name() === commandName);
-        if (cmd) {
-          cmd.help();
-        } else {
-          console.error(`Unknown command: ${commandName}`);
-          program.help();
-        }
-      } else {
-        program.help();
+    .option("--json", "Output JSON")
+    .action((commandPath, options) => {
+      const target = findCommand(program, commandPath || []);
+      if (options.json) {
+        renderJson({
+          ok: true,
+          command: target === program ? "help" : `help ${serializeCommand(target).fullName}`,
+          target: serializeCommand(target),
+        });
+        return;
       }
+
+      target.help();
+    });
+
+  program
+    .command("describe [command...]")
+    .description("Describe a command as machine-readable JSON")
+    .option("--json", "Output JSON")
+    .action((commandPath, options) => {
+      const target = findCommand(program, commandPath || []);
+      const description = serializeCommand(target);
+      renderJson({
+        ok: true,
+        command: target === program ? "describe" : `describe ${description.fullName}`,
+        target: description,
+      });
     });
 
   return program;

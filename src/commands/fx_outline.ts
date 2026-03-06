@@ -225,6 +225,7 @@ export async function fxOutlineCommand(image: string, opts: FxOutlineOptions) {
   // Build result
   const result = {
     ok: true,
+    command: "fx outline",
     outPath,
     mime,
     bytes: outputBytes.length,

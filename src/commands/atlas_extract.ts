@@ -5,9 +5,10 @@ import { UsageError, FilesystemError } from "../errors";
 import { renderJson, renderPlain } from "../output";
 
 export interface AtlasExtractOptions {
-  json: string;
+  atlasJson: string;
   out: string;
   force?: boolean;
+  json?: boolean;
   jsonOutput?: boolean;
   plain?: boolean;
   quiet?: boolean;
@@ -198,7 +199,7 @@ export async function atlasExtractCommand(
   const sharp = await loadSharp();
 
   // Parse TexturePacker JSON
-  const jsonPath = resolve(opts.json);
+  const jsonPath = resolve(opts.atlasJson);
   const jsonFile = Bun.file(jsonPath);
 
   if (!(await jsonFile.exists())) {
@@ -318,6 +319,7 @@ export async function atlasExtractCommand(
   // Build result
   const result = {
     ok: true,
+    command: "atlas extract",
     outDir,
     source: imagePath,
     sourceWidth: imageInfo.width,
@@ -327,7 +329,7 @@ export async function atlasExtractCommand(
   };
 
   // Output handling
-  if (opts.jsonOutput) {
+  if (opts.json || opts.jsonOutput) {
     renderJson(result);
   } else if (opts.plain) {
     renderPlain(formatPlain(result));

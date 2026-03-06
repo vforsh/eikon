@@ -165,8 +165,34 @@ test("eikon presets list --json works", async () => {
   const { code, stdout } = await runEikon(["presets", "list", "--json"]);
   expect(code).toBe(0);
   const parsed = JSON.parse(stdout);
-  expect(Array.isArray(parsed)).toBe(true);
-  expect(parsed.some((p: any) => p.name === "web-ui")).toBe(true);
+  expect(parsed.ok).toBe(true);
+  expect(parsed.command).toBe("presets list");
+  expect(Array.isArray(parsed.presets)).toBe(true);
+  expect(parsed.presets.some((p: any) => p.name === "web-ui")).toBe(true);
+});
+
+test("eikon help --json describes root command", async () => {
+  const { code, stdout } = await runEikon(["help", "--json"]);
+  expect(code).toBe(0);
+
+  const parsed = JSON.parse(stdout);
+  expect(parsed.ok).toBe(true);
+  expect(parsed.command).toBe("help");
+  expect(parsed.target.fullName).toBe("eikon");
+  expect(Array.isArray(parsed.target.subcommands)).toBe(true);
+  expect(parsed.target.subcommands.some((c: any) => c.fullName === "analyze")).toBe(true);
+});
+
+test("eikon describe atlas split returns machine-readable schema", async () => {
+  const { code, stdout } = await runEikon(["describe", "atlas", "split"]);
+  expect(code).toBe(0);
+
+  const parsed = JSON.parse(stdout);
+  expect(parsed.ok).toBe(true);
+  expect(parsed.command).toBe("describe atlas split");
+  expect(parsed.target.fullName).toBe("atlas split");
+  expect(parsed.target.options.some((o: any) => o.name === "atlas-json")).toBe(true);
+  expect(parsed.target.options.some((o: any) => o.name === "json")).toBe(true);
 });
 
 test("eikon config path works", async () => {

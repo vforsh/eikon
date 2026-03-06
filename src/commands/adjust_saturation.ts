@@ -101,6 +101,7 @@ export async function adjustSaturationCommand(image: string, opts: AdjustSaturat
 
   const result = {
     ok: true,
+    command: "adjust saturation",
     outPath,
     mime,
     bytes: outputBytes.length,

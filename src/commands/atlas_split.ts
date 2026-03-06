@@ -5,11 +5,12 @@ import { UsageError, FilesystemError } from "../errors";
 import { renderJson, renderPlain } from "../output";
 
 export interface AtlasSplitOptions {
-  json?: string;
+  atlasJson?: string;
   auto?: boolean;
   out: string;
   metadata?: boolean;
   force?: boolean;
+  json?: boolean;
   jsonOutput?: boolean;
   plain?: boolean;
   quiet?: boolean;
@@ -281,9 +282,9 @@ export async function atlasSplitCommand(image: string, opts: AtlasSplitOptions) 
   // Determine sprite regions
   let regions: SpriteRegion[];
 
-  if (opts.json) {
+  if (opts.atlasJson) {
     // Parse TexturePacker JSON
-    const jsonPath = resolve(opts.json);
+    const jsonPath = resolve(opts.atlasJson);
     const jsonFile = Bun.file(jsonPath);
 
     if (!(await jsonFile.exists())) {
@@ -299,7 +300,7 @@ export async function atlasSplitCommand(image: string, opts: AtlasSplitOptions) 
     if (regions.length === 0) {
       throw new UsageError("No sprites detected in image", [
         "The image may not have transparent regions separating sprites.",
-        "Try using --json with a TexturePacker JSON file instead.",
+        "Try using --atlas-json with a TexturePacker JSON file instead.",
       ]);
     }
   }
@@ -386,18 +387,19 @@ export async function atlasSplitCommand(image: string, opts: AtlasSplitOptions) 
   // Build result
   const result = {
     ok: true,
+    command: "atlas split",
     outDir,
     source: imagePath,
     sourceWidth: imageInfo.width,
     sourceHeight: imageInfo.height,
     spriteCount: extractedSprites.length,
-    detectionMethod: opts.json ? "texturepacker-json" : "auto-transparency",
+    detectionMethod: opts.atlasJson ? "texturepacker-json" : "auto-transparency",
     metadataPath,
     sprites: extractedSprites,
   };
 
   // Output handling
-  if (opts.jsonOutput) {
+  if (opts.json || opts.jsonOutput) {
     renderJson(result);
   } else if (opts.plain) {
     renderPlain(formatPlain(result));

@@ -2,6 +2,7 @@ import { EikonError } from "./errors";
 
 export interface AnalysisResult {
   ok: true;
+  command: string;
   text: string;
   meta: {
     model: string;

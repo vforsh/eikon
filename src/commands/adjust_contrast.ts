@@ -106,6 +106,7 @@ export async function adjustContrastCommand(image: string, opts: AdjustContrastO
 
   const result = {
     ok: true,
+    command: "adjust contrast",
     outPath,
     mime,
     bytes: outputBytes.length,

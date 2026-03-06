@@ -1,6 +1,6 @@
 {
   "name": "@vforsh/eikon",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "CLI for image analysis and processing via OpenRouter vision models and local Sharp operations",
   "type": "module",
   "repository": {

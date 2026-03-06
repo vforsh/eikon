@@ -190,6 +190,7 @@ export async function fxTintCommand(image: string, opts: FxTintOptions) {
   // Build result
   const outputResult = {
     ok: true,
+    command: "fx tint",
     outPath,
     mime,
     bytes: outputBytes.length,

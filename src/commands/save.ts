@@ -9,6 +9,7 @@ export interface SaveOptions {
   out: string;
   force?: boolean;
   json?: boolean;
+  quiet?: boolean;
 }
 
 export async function saveCommand(opts: SaveOptions) {
@@ -83,9 +84,10 @@ export async function saveCommand(opts: SaveOptions) {
   if (opts.json) {
     renderJson({
       ok: true,
+      command: "save",
       info: result,
     });
-  } else {
+  } else if (!opts.quiet) {
     renderPlain(`Path: ${result.path}`);
     renderPlain(`MIME: ${result.mime}`);
     renderPlain(`Bytes: ${result.bytes}`);
