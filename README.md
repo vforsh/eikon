@@ -32,6 +32,7 @@ Commands:
   analyze:local Show local image information (no LLM)
   upscale       Upscale an image via OpenRouter image-edit
   upscale:local Upscale an image locally via sharp
+  fx            Local image effects (shadow, inner-shadow, outline, glow, blur, tint)
   generate      Generate an image from a text prompt
   edit          Edit an image using AI with natural language instructions
   save          Save an image from piped dataURL or --input file
@@ -96,6 +97,11 @@ eikon upscale ./image.png --out ./image@2x.png --width 2400 --json
 # Upscale locally via sharp
 eikon upscale:local ./image.png --out ./image@2x.png
 eikon upscale:local ./image.png --out ./image@2x.png --height 2400 --plain
+
+# Add local image effects
+eikon fx shadow ./sprite.png --out ./sprite-shadow.png
+eikon fx inner-shadow ./button.png --color "#5b3413" --blur 6 --dy 3 --opacity 0.6 --out ./button-inset.png
+eikon fx glow ./icon.png --color "#ffd54a" --blur 12 --out ./icon-glow.png
 
 # Generate from a prompt (optional reference image)
 eikon generate --prompt "Minimal icon of a cat" --out-dir ./out

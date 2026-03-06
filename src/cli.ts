@@ -19,6 +19,7 @@ import { transformTrimCommand } from "./commands/transform_trim";
 import { transformMaskCommand } from "./commands/transform_mask";
 import { transformShiftCommand } from "./commands/transform_shift";
 import { fxShadowCommand } from "./commands/fx_shadow";
+import { fxInnerShadowCommand } from "./commands/fx_inner_shadow";
 import { fxOutlineCommand } from "./commands/fx_outline";
 import { fxGlowCommand } from "./commands/fx_glow";
 import { fxBlurCommand } from "./commands/fx_blur";
@@ -561,7 +562,7 @@ Examples:
       await transformShiftCommand(image, options);
     });
 
-  const fx = program.command("fx").description("Visual effects (shadow, outline, glow, blur, tint)");
+  const fx = program.command("fx").description("Visual effects (shadow, inner-shadow, outline, glow, blur, tint)");
 
   fx.command("shadow <image>")
     .description("Add a drop shadow behind opaque content")
@@ -585,6 +586,30 @@ Examples:
 `)
     .action(async (image, options) => {
       await fxShadowCommand(image, options);
+    });
+
+  fx.command("inner-shadow <image>")
+    .description("Add an inset shadow inside opaque content")
+    .requiredOption("--out <file>", "Output path (extension determines format)")
+    .option("--color <hex>", "Inner shadow color (default: #000000)")
+    .option("--opacity <0..1>", "Inner shadow opacity (default: 0.5)")
+    .option("--blur <px>", "Inner shadow blur radius / sigma (default: 10)")
+    .option("--dx <px>", "Horizontal inset offset (default: 0)")
+    .option("--dy <px>", "Vertical inset offset (default: 4)")
+    .option("--spread <px>", "Inset thickness / erosion radius (default: 0)")
+    .option("--force", "Overwrite if --out exists")
+    .option("--json", "Output JSON")
+    .option("--plain", "Stable plain-text output")
+    .option("--quiet", "Suppress non-error output")
+    .option("--no-color", "Disable color")
+    .addHelpText("before", `
+Examples:
+  eikon fx inner-shadow sprite.png --out sprite-inset.png
+  eikon fx inner-shadow icon.png --color "#5b3413" --blur 6 --dy 3 --opacity 0.6 --out out.png
+  eikon fx inner-shadow panel.png --spread 4 --blur 10 --dx 2 --dy 2 --out panel-inset.png --force
+`)
+    .action(async (image, options) => {
+      await fxInnerShadowCommand(image, options);
     });
 
   fx.command("outline <image>")

@@ -195,6 +195,10 @@ Region types: `left:<px|%>`, `right:<px|%>`, `top:<px|%>`, `bottom:<px|%>`, `bor
 eikon fx shadow img.png --out shadow.png
 eikon fx shadow img.png --color "#000" --opacity 0.5 --blur 10 --dx 0 --dy 4 --spread 0 --out shadow.png
 
+# Inner shadow
+eikon fx inner-shadow img.png --out inset.png
+eikon fx inner-shadow img.png --color "#5b3413" --opacity 0.6 --blur 6 --dx 0 --dy 3 --spread 2 --out inset.png
+
 # Outline (stroke around opaque pixels)
 eikon fx outline img.png --out outlined.png
 eikon fx outline img.png --color "#ff0000" --width 3 --out outlined.png

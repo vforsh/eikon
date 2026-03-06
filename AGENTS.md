@@ -35,7 +35,7 @@ No lint/format tooling configured. No build step — Bun runs `.ts` directly via
 
 **Command pattern**: each command lives in `src/commands/<name>.ts`, exports a setup function that receives a Commander parent command, defines args/options/action. Commands throw `EikonError` subclasses; the error boundary in `cli.ts` catches and renders them.
 
-**Command groups**: `analyze`, `upscale:local`, `save`, `atlas` (split/extract/create), `transform` (rotate/flip/crop/pad/trim/mask/shift), `fx` (shadow/outline/glow/blur/tint), `adjust` (brightness/contrast/saturation/vibrance), `placeholder`, `compose`, `presets`, `config`, `openrouter`.
+**Command groups**: `analyze`, `upscale:local`, `save`, `atlas` (split/extract/create), `transform` (rotate/flip/crop/pad/trim/mask/shift), `fx` (shadow/inner-shadow/outline/glow/blur/tint), `adjust` (brightness/contrast/saturation/vibrance), `placeholder`, `compose`, `presets`, `config`, `openrouter`.
 
 **Config precedence**: CLI flags → env vars → config file → defaults.
 
