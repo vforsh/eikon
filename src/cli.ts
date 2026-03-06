@@ -814,14 +814,14 @@ Examples:
   return program;
 }
 
-export async function run() {
+export async function run(argv = process.argv) {
   const program = await createProgram();
   
   try {
-    await program.parseAsync();
+    await program.parseAsync(argv);
   } catch (error: any) {
-    const isDebug = process.argv.includes("--debug");
-    const isJson = process.argv.includes("--json");
+    const isDebug = argv.includes("--debug");
+    const isJson = argv.includes("--json");
 
     if (error instanceof EikonError) {
       if (isJson) {

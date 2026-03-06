@@ -144,7 +144,7 @@ export async function fxOutlineCommand(image: string, opts: FxOutlineOptions) {
   const srcAlpha = new Uint8Array(alphaBuffer);
   for (let y = 0; y < srcH; y++) {
     for (let x = 0; x < srcW; x++) {
-      paddedAlpha[(y + outlineWidth) * expandedW + (x + outlineWidth)] = srcAlpha[y * srcW + x];
+      paddedAlpha[(y + outlineWidth) * expandedW + (x + outlineWidth)] = srcAlpha[y * srcW + x] ?? 0;
     }
   }
 
@@ -160,7 +160,7 @@ export async function fxOutlineCommand(image: string, opts: FxOutlineOptions) {
           const nx = x + sx;
           const ny = y + sy;
           if (nx >= 0 && nx < expandedW && ny >= 0 && ny < expandedH) {
-            maxVal = Math.max(maxVal, paddedAlpha[ny * expandedW + nx]);
+            maxVal = Math.max(maxVal, paddedAlpha[ny * expandedW + nx] ?? 0);
           }
         }
       }
@@ -171,7 +171,7 @@ export async function fxOutlineCommand(image: string, opts: FxOutlineOptions) {
   // Step 4: Subtract original padded alpha from dilated to get outline-only ring
   const outlineAlpha = new Uint8Array(expandedW * expandedH);
   for (let i = 0; i < expandedW * expandedH; i++) {
-    const diff = dilated[i] - paddedAlpha[i];
+    const diff = (dilated[i] ?? 0) - (paddedAlpha[i] ?? 0);
     outlineAlpha[i] = diff > 0 ? diff : 0;
   }
 
@@ -181,7 +181,7 @@ export async function fxOutlineCommand(image: string, opts: FxOutlineOptions) {
     outlineRgba[i * 4 + 0] = outlineColor.r;
     outlineRgba[i * 4 + 1] = outlineColor.g;
     outlineRgba[i * 4 + 2] = outlineColor.b;
-    outlineRgba[i * 4 + 3] = outlineAlpha[i];
+    outlineRgba[i * 4 + 3] = outlineAlpha[i] ?? 0;
   }
 
   const outlineLayer: Buffer = await sharp(outlineRgba, {

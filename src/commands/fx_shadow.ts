@@ -181,7 +181,7 @@ export async function fxShadowCommand(image: string, opts: FxShadowOptions) {
             const nx = x + sx;
             const ny = y + sy;
             if (nx >= 0 && nx < srcW && ny >= 0 && ny < srcH) {
-              maxVal = Math.max(maxVal, src[ny * srcW + nx]);
+              maxVal = Math.max(maxVal, src[ny * srcW + nx] ?? 0);
             }
           }
         }
@@ -211,7 +211,7 @@ export async function fxShadowCommand(image: string, opts: FxShadowOptions) {
       // Extract first channel only
       processedAlpha = Buffer.alloc(srcW * srcH);
       for (let i = 0; i < srcW * srcH; i++) {
-        processedAlpha[i] = data[i * info.channels];
+        processedAlpha[i] = data[i * info.channels] ?? 0;
       }
     }
   } else {
@@ -222,7 +222,7 @@ export async function fxShadowCommand(image: string, opts: FxShadowOptions) {
   if (opacity < 1) {
     const pixels = new Uint8Array(processedAlpha);
     for (let i = 0; i < pixels.length; i++) {
-      pixels[i] = Math.round(pixels[i] * opacity);
+      pixels[i] = Math.round((pixels[i] ?? 0) * opacity);
     }
     processedAlpha = Buffer.from(pixels);
   }
@@ -234,7 +234,7 @@ export async function fxShadowCommand(image: string, opts: FxShadowOptions) {
     shadowRgba[i * 4 + 0] = shadowColor.r;
     shadowRgba[i * 4 + 1] = shadowColor.g;
     shadowRgba[i * 4 + 2] = shadowColor.b;
-    shadowRgba[i * 4 + 3] = alphaPixels[i];
+    shadowRgba[i * 4 + 3] = alphaPixels[i] ?? 0;
   }
 
   const shadowLayer: Buffer = await sharp(shadowRgba, {

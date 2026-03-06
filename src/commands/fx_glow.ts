@@ -165,7 +165,7 @@ export async function fxGlowCommand(image: string, opts: FxGlowOptions) {
             const nx = x + sx;
             const ny = y + sy;
             if (nx >= 0 && nx < srcW && ny >= 0 && ny < srcH) {
-              maxVal = Math.max(maxVal, src[ny * srcW + nx]);
+              maxVal = Math.max(maxVal, src[ny * srcW + nx] ?? 0);
             }
           }
         }
@@ -195,7 +195,7 @@ export async function fxGlowCommand(image: string, opts: FxGlowOptions) {
       // Extract first channel only
       processedAlpha = Buffer.alloc(srcW * srcH);
       for (let i = 0; i < srcW * srcH; i++) {
-        processedAlpha[i] = data[i * info.channels];
+        processedAlpha[i] = data[i * info.channels] ?? 0;
       }
     }
   } else {
@@ -207,7 +207,7 @@ export async function fxGlowCommand(image: string, opts: FxGlowOptions) {
   if (opacity < 1) {
     const pixels = new Uint8Array(processedAlpha);
     for (let i = 0; i < pixels.length; i++) {
-      pixels[i] = Math.round(pixels[i] * opacity);
+      pixels[i] = Math.round((pixels[i] ?? 0) * opacity);
     }
     processedAlpha = Buffer.from(pixels);
   }
@@ -219,7 +219,7 @@ export async function fxGlowCommand(image: string, opts: FxGlowOptions) {
     glowRgba[i * 4 + 0] = glowColor.r;
     glowRgba[i * 4 + 1] = glowColor.g;
     glowRgba[i * 4 + 2] = glowColor.b;
-    glowRgba[i * 4 + 3] = alphaPixels[i];
+    glowRgba[i * 4 + 3] = alphaPixels[i] ?? 0;
   }
 
   const glowLayer: Buffer = await sharp(glowRgba, {

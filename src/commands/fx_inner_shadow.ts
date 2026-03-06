@@ -113,7 +113,7 @@ function erodeAlphaMask(alphaBuffer: Buffer, width: number, height: number, radi
             break;
           }
 
-          minVal = Math.min(minVal, src[ny * width + nx]);
+          minVal = Math.min(minVal, src[ny * width + nx] ?? 0);
         }
       }
 
@@ -149,7 +149,7 @@ async function blurSingleChannel(
 
   const singleChannel = Buffer.alloc(width * height);
   for (let i = 0; i < width * height; i++) {
-    singleChannel[i] = data[i * info.channels];
+    singleChannel[i] = data[i * info.channels] ?? 0;
   }
   return singleChannel;
 }
@@ -209,18 +209,18 @@ export async function fxInnerShadowCommand(image: string, opts: FxInnerShadowOpt
 
   const width = originalInfo.width;
   const height = originalInfo.height;
-  const channels = info.channels;
+  const channels = info.channels ?? 4;
 
   const originalRgba = Buffer.alloc(width * height * 4);
   const originalAlpha = Buffer.alloc(width * height);
   for (let i = 0; i < width * height; i++) {
     const srcIndex = i * channels;
     const dstIndex = i * 4;
-    originalRgba[dstIndex + 0] = rawInput[srcIndex + 0];
-    originalRgba[dstIndex + 1] = rawInput[srcIndex + 1];
-    originalRgba[dstIndex + 2] = rawInput[srcIndex + 2];
-    originalRgba[dstIndex + 3] = rawInput[srcIndex + 3];
-    originalAlpha[i] = rawInput[srcIndex + 3];
+    originalRgba[dstIndex + 0] = rawInput[srcIndex + 0] ?? 0;
+    originalRgba[dstIndex + 1] = rawInput[srcIndex + 1] ?? 0;
+    originalRgba[dstIndex + 2] = rawInput[srcIndex + 2] ?? 0;
+    originalRgba[dstIndex + 3] = rawInput[srcIndex + 3] ?? 0;
+    originalAlpha[i] = rawInput[srcIndex + 3] ?? 0;
   }
 
   const erodedAlpha = erodeAlphaMask(originalAlpha, width, height, spread);
@@ -234,7 +234,7 @@ export async function fxInnerShadowCommand(image: string, opts: FxInnerShadowOpt
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const i = y * width + x;
-      const originalAlphaValue = alphaPixels[i];
+      const originalAlphaValue = alphaPixels[i] ?? 0;
       if (originalAlphaValue === 0) {
         continue;
       }
@@ -243,7 +243,7 @@ export async function fxInnerShadowCommand(image: string, opts: FxInnerShadowOpt
       const coverageY = y + dy;
       const coverage =
         coverageX >= 0 && coverageX < width && coverageY >= 0 && coverageY < height
-          ? softenedPixels[coverageY * width + coverageX]
+          ? (softenedPixels[coverageY * width + coverageX] ?? 0)
           : 0;
 
       const innerShadowStrength = Math.max(0, originalAlphaValue - coverage);
@@ -257,9 +257,9 @@ export async function fxInnerShadowCommand(image: string, opts: FxInnerShadowOpt
       }
 
       const idx = i * 4;
-      outPixels[idx + 0] = Math.round(outPixels[idx + 0] * (1 - shadowAlpha) + shadowColor.r * shadowAlpha);
-      outPixels[idx + 1] = Math.round(outPixels[idx + 1] * (1 - shadowAlpha) + shadowColor.g * shadowAlpha);
-      outPixels[idx + 2] = Math.round(outPixels[idx + 2] * (1 - shadowAlpha) + shadowColor.b * shadowAlpha);
+      outPixels[idx + 0] = Math.round((outPixels[idx + 0] ?? 0) * (1 - shadowAlpha) + shadowColor.r * shadowAlpha);
+      outPixels[idx + 1] = Math.round((outPixels[idx + 1] ?? 0) * (1 - shadowAlpha) + shadowColor.g * shadowAlpha);
+      outPixels[idx + 2] = Math.round((outPixels[idx + 2] ?? 0) * (1 - shadowAlpha) + shadowColor.b * shadowAlpha);
       outPixels[idx + 3] = originalAlphaValue;
     }
   }

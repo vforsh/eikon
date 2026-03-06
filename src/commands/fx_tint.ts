@@ -143,10 +143,10 @@ export async function fxTintCommand(image: string, opts: FxTintOptions) {
   // Step 2: For each pixel, compute luminance-based tint and blend
   for (let i = 0; i < pixelCount; i++) {
     const off = i * 4;
-    const r = pixels[off];
-    const g = pixels[off + 1];
-    const b = pixels[off + 2];
-    const a = pixels[off + 3];
+    const r = pixels[off] ?? 0;
+    const g = pixels[off + 1] ?? 0;
+    const b = pixels[off + 2] ?? 0;
+    const a = pixels[off + 3] ?? 0;
 
     // Perceived luminance (ITU-R BT.601)
     const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;

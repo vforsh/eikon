@@ -1,20 +1,33 @@
 {
-  "name": "eikon",
+  "name": "@vforsh/eikon",
   "version": "0.1.0",
-  "description": "CLI for sending a prompt and image to OpenRouter",
-  "module": "index.ts",
+  "description": "CLI for image analysis and processing via OpenRouter vision models and local Sharp operations",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vforsh/eikon.git"
+  },
+  "homepage": "https://github.com/vforsh/eikon#readme",
+  "bugs": {
+    "url": "https://github.com/vforsh/eikon/issues"
+  },
   "scripts": {
+    "cmd": "bun run ./bin/eikon",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "bun test",
+    "prepublishOnly": "bun run typecheck && bun test",
     "test:e2e": "bun test tests/e2e.test.ts"
   },
   "bin": {
-    "eikon": "index.ts"
+    "eikon": "bin/eikon"
   },
   "files": [
+    "bin",
     "index.ts",
+    "src",
     "README.md",
-    "AGENTS.md",
-    "prompts"
+    "prompts",
+    "skill"
   ],
   "dependencies": {
     "@openrouter/sdk": "^0.4.0",
@@ -23,12 +36,13 @@
     "sharp": "^0.34.5"
   },
   "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "@types/bun": "latest",
+    "typescript": "latest"
   },
   "engines": {
     "bun": ">=1.3.5"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

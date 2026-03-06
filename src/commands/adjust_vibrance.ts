@@ -97,10 +97,10 @@ export async function adjustVibranceCommand(image: string, opts: AdjustVibranceO
   // Per-pixel vibrance: boost less-saturated pixels more than already-saturated ones
   for (let i = 0; i < pixelCount; i++) {
     const off = i * 4;
-    const r = pixels[off];
-    const g = pixels[off + 1];
-    const b = pixels[off + 2];
-    const a = pixels[off + 3];
+    const r = pixels[off] ?? 0;
+    const g = pixels[off + 1] ?? 0;
+    const b = pixels[off + 2] ?? 0;
+    const a = pixels[off + 3] ?? 0;
 
     const maxC = Math.max(r, g, b) / 255;
     const avg = (r + g + b) / (3 * 255);

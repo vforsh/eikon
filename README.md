@@ -16,10 +16,31 @@ Named after the Ancient Greek word “eikōn” (εἰκών), meaning “image,
   - `OPENROUTER_PROVISIONING_KEY` (env)
   - `eikon openrouter <subcommand> --api-key <key>`
 
-## Install (local)
+## Install
+
+Published package:
+
+```bash
+bunx @vforsh/eikon --help
+npx @vforsh/eikon --help
+```
+
+Global install:
+
+```bash
+bun add -g @vforsh/eikon
+npm install -g @vforsh/eikon
+```
+
+`eikon` is a Bun CLI. `bunx` works directly. `npx` also works, but Bun still must be installed and available on `PATH` because the package binary uses `#!/usr/bin/env bun`.
+
+The npm package is scoped as `@vforsh/eikon`. The installed executable is still `eikon`.
+
+## Install (local development)
 
 ```bash
 bun install
+bun link
 ```
 
 ## Usage
